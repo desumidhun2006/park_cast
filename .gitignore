@@ -1,0 +1,30 @@
+# Node
+node_modules/
+dist/
+.next/
+coverage/
+
+# Env
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+frontend-screenshots/
+
+# Mongo / data
+*.log
+dump/

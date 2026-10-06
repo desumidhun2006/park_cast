@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ParkCast — Predictive Parking</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>ParkCast</h1>
+      <p class="subtitle">Where &amp; when you're most likely to find a spot</p>
+    </div>
+    <div class="gamification">
+      <span data-testid="points-display" id="points-display">0 pts</span>
+      <span data-testid="badges-display" id="badges-display">No badges yet</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap">
+      <div id="map" data-testid="map" aria-label="Parking zones map"></div>
+      <div class="legend">
+        <span><i class="dot high"></i> High chance (≥60%)</span>
+        <span><i class="dot medium"></i> Medium (35–59%)</span>
+        <span><i class="dot low"></i> Low (&lt;35%)</span>
+      </div>
+      <div class="slider-row">
+        <label for="time-slider">Forecast horizon: <strong data-testid="time-label" id="time-label">+15 min</strong></label>
+        <input data-testid="time-slider" id="time-slider" type="range" min="0" max="180" step="15" value="15" />
+      </div>
+      <div class="zone-list" aria-label="Zones">
+        <h3>Zones</h3>
+        <div id="zone-buttons"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section data-testid="zone-detail" id="zone-detail" class="card hidden" aria-live="polite">
+        <button data-testid="zone-detail-close" id="zone-detail-close" class="close">✕</button>
+        <h2 id="detail-name">Zone</h2>
+        <p id="detail-meta" class="muted"></p>
+        <div id="detail-bars"></div>
+        <p id="detail-extra"></p>
+      </section>
+
+      <section class="card">
+        <h2>Trip Planner</h2>
+        <label>Origin <input data-testid="trip-origin" id="trip-origin" value="Campus North Gate" /></label>
+        <label>Destination <input data-testid="trip-destination" id="trip-destination" value="Gateway Mall" /></label>
+        <label>Arrival <input data-testid="trip-time" id="trip-time" type="datetime-local" /></label>
+        <button data-testid="trip-search" id="trip-search">Find parking</button>
+        <div data-testid="trip-results" id="trip-results" class="results"></div>
+      </section>
+
+      <section class="card">
+        <h2>Crowd Report — one tap</h2>
+        <label>Zone
+          <select data-testid="report-zone-select" id="report-zone-select"></select>
+        </label>
+        <div class="btn-row">
+          <button data-testid="report-found" id="report-found">Found spot</button>
+          <button data-testid="report-full" id="report-full">No spots here</button>
+          <button data-testid="report-circling" id="report-circling">Circling &gt; 5 min</button>
+        </div>
+        <p data-testid="report-status" id="report-status" class="muted">Tap to contribute anonymously. +10 pts each.</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>ParkCast v0 — software-only forecasting (no sensors). Open data + crowd signals.</span>
+    <span id="api-status" data-testid="api-status"></span>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
