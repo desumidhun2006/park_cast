@@ -77,13 +77,13 @@ try {
   await page.locator('[data-testid="zone-detail-close"]').click();
   check('zone detail closes', await page.locator('#zone-detail.hidden').count() === 1);
 
-  // trip planner
+  // trip planner (hint text shows first; wait for search-completion marker)
   await page.locator('[data-testid="trip-origin"]').fill('Campus');
   await page.locator('[data-testid="trip-destination"]').fill('Gateway Mall');
   await page.locator('[data-testid="trip-search"]').click();
-  await page.waitForSelector('#trip-results .result', { timeout: 8000 });
+  await page.waitForSelector('[data-testid="trip-saved"]', { timeout: 8000 });
   const nResults = await page.locator('#trip-results .result').count();
-  check('trip planner returns results', nResults >= 4, `${nResults} rows`);
+  check('trip planner returns results', nResults >= 5, `${nResults} rows`);
   await page.screenshot({ path: `${shots}/03-trip.png` });
 
   // crowd reports (all three)

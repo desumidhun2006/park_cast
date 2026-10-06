@@ -45,7 +45,6 @@
   const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('pc_points') || '0', 10) };
 
   const $ = (id) => document.getElementById(id);
-  const mapEl = $('map');
 
   let map = null, markers = {};
   try {
@@ -89,6 +88,7 @@
         } catch {}
       }
       const b = document.createElement('button');
+      b.type = 'button';
       b.textContent = `${z.name} ${Math.round(p * 100)}%`;
       b.setAttribute('data-testid', `zone-marker-${z.id}`);
       b.addEventListener('click', () => selectZone(z.id));
@@ -201,6 +201,14 @@
 
   // expose for Playwright
   window.__parkcast = { state, selectZone, report, fetchZones };
+
+  // Default arrival = now + 60 min (rounded to 5 min) so Trip Planner works in one click.
+  try {
+    const t = new Date(Date.now() + 60 * 60000);
+    t.setMinutes(Math.round(t.getMinutes() / 5) * 5, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    $('trip-time').value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  } catch {}
 
   renderPoints();
   renderZones();
