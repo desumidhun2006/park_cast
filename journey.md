@@ -33,3 +33,4 @@ Execution Frequency: This entire 5-step protocol must be repeated for every sing
 | d7e6e3d | Frontend polish — trip planner default arrival (+60m), results hint, button types/a11y, removed dead code; hardened smoke test wait (trip-saved marker); Playwright 21/21 PASS |
 | 837550a | Open website — re-ran Playwright smoke 21/21 PASS, started persistent backend :4000 + frontend :5173, opened http://localhost:5173 in browser |
 | dd991a7 | Google Maps home page + live location — replaced Leaflet/OSM with Maps JS API (key via ?gmaps_key=/localStorage/config.js, gitignored), hero-size map, auto geolocation centering + blue-dot marker + 📍 retry button, key/auth-failure notices; smoke extended to 26/26 PASS incl. granted+denied location paths |
+| 5e23a63 | API key guide — new docs/GOOGLE_MAPS_KEY.md (project, billing, enable API, create + restrict key, usage, troubleshooting); smoke re-run 26/26 PASS |
