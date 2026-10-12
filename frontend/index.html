@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ParkCast — Predictive Parking</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -21,6 +20,10 @@
 
   <main class="layout">
     <section class="map-wrap">
+      <div class="map-toolbar">
+        <button data-testid="locate-me" id="locate-me" type="button">📍 Use my location</button>
+        <span data-testid="location-status" id="location-status" class="muted">Locating you…</span>
+      </div>
       <div id="map" data-testid="map" aria-label="Parking zones map"></div>
       <div class="legend">
         <span><i class="dot high"></i> High chance (≥60%)</span>
@@ -75,7 +78,7 @@
     <span id="api-status" data-testid="api-status"></span>
   </footer>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./config.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

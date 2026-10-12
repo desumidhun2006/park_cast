@@ -1,8 +1,13 @@
-// ParkCast frontend v0 — Leaflet prototype (maps 1:1 to React component plan).
+// ParkCast frontend v1 — Google Maps home page + live user location.
 // Tries backend API, falls back to embedded mock so it works offline / in tests.
+// Map layer: Google Maps JavaScript API (key via ?gmaps_key=, localStorage, or config.js).
+// Location layer: navigator.geolocation centers the map where the person is right now.
 (function () {
   const params = new URLSearchParams(location.search);
   const API_BASE = params.get('api') || 'http://localhost:4000';
+
+  const DEFAULT_CENTER = { lat: 37.8715, lng: -122.273 };
+  const PLACEHOLDER_KEYS = new Set(['', 'PASTE_YOUR_KEY_HERE', 'YOUR_API_KEY']);
 
   const LOCAL_ZONES = [
     { id: 'zone-mall-gateway', name: 'Gateway Mall Lot', center: { lat: 37.8725, lng: -122.2715 }, capacity: 220, pricePerHour: 2.5, walkTo: [{ label: 'Gateway Mall', minutes: 3 }], peakHours: 'Weekdays 17-19 full, empties after 20', poiTags: ['mall'] },
@@ -42,15 +47,144 @@
   function statusOf(p) { return p >= 0.6 ? 'high' : p >= 0.35 ? 'medium' : 'low'; }
   function colorOf(s) { return s === 'high' ? '#22c55e' : s === 'medium' ? '#eab308' : '#ef4444'; }
 
-  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('pc_points') || '0', 10) };
+  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('pc_points') || '0', 10), userLocation: null, mapReady: false, keySource: null };
 
   const $ = (id) => document.getElementById(id);
 
-  let map = null, markers = {};
-  try {
-    map = L.map('map').setView([37.8715, -122.273], 14);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-  } catch (e) { console.warn('Leaflet init failed (offline?), continuing', e); }
+  // ---- Google Maps key resolution: ?gmaps_key= > localStorage > config.js ----
+  function resolveApiKey() {
+    const urlKey = params.get('gmaps_key');
+    if (urlKey !== null) {
+      if (urlKey && !PLACEHOLDER_KEYS.has(urlKey)) {
+        try { localStorage.setItem('pc_gmaps_key', urlKey); } catch {}
+        state.keySource = 'url';
+        return urlKey;
+      }
+      try { localStorage.removeItem('pc_gmaps_key'); } catch {}
+      state.keySource = null;
+      return null;
+    }
+    try {
+      const stored = localStorage.getItem('pc_gmaps_key');
+      if (stored && !PLACEHOLDER_KEYS.has(stored)) { state.keySource = 'stored'; return stored; }
+    } catch {}
+    const cfg = (window.PARKCAST_CONFIG && window.PARKCAST_CONFIG.GOOGLE_MAPS_API_KEY) || '';
+    if (cfg && !PLACEHOLDER_KEYS.has(cfg)) { state.keySource = 'config'; return cfg; }
+    state.keySource = null;
+    return null;
+  }
+
+  function showMapNotice(html) {
+    const el = $('map');
+    el.innerHTML = `<div class="map-notice" data-testid="map-notice">${html}</div>`;
+  }
+
+  function keySetupHtml(reason) {
+    return `${reason}<br><br>To enable the live Google map, add your browser API key ` +
+      `(Google Cloud Console → enable <b>Maps JavaScript API</b> → Credentials → API key), then either:<br>` +
+      `1. Open the site with <code>?gmaps_key=YOUR_KEY</code>, or<br>` +
+      `2. Copy <code>frontend/config.example.js</code> to <code>config.js</code> and paste the key there.<br><br>` +
+      `Zone list, forecasts, trip planner and reports below all work without a key.`;
+  }
+
+  // ---- Google Maps ----
+  let map = null;
+  let circles = {};
+  let youMarker = null;
+  let accuracyCircle = null;
+
+  window.__pcInitMap = function () {
+    try {
+      map = new google.maps.Map($('map'), { center: state.userLocation || DEFAULT_CENTER, zoom: 14, mapTypeControl: false, streetViewControl: false });
+      state.mapReady = true;
+      if (state.userLocation) placeYouMarker(state.userLocation);
+      renderZones();
+    } catch (e) {
+      showMapNotice(keySetupHtml('Google Maps failed to initialize.'));
+    }
+  };
+
+  window.gm_authFailure = function () {
+    state.mapReady = false;
+    showMapNotice(keySetupHtml('Google Maps rejected the API key (auth failure) — check the key and its restrictions.'));
+  };
+
+  function loadGoogleMaps(key) {
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__pcInitMap&loading=async`;
+    s.async = true;
+    s.defer = true;
+    s.onerror = () => showMapNotice(keySetupHtml("Couldn't load the Google Maps script (network or key issue)."));
+    document.head.appendChild(s);
+  }
+
+  function syncCircles() {
+    if (!state.mapReady) return;
+    // remove circles for zones that no longer exist
+    Object.keys(circles).forEach(id => {
+      if (!state.zones.find(z => z.id === id)) { circles[id].setMap(null); delete circles[id]; }
+    });
+    state.zones.forEach(z => {
+      const p = probAt(z, state.horizonMin);
+      const s = z.current && state.horizonMin === 15 && z.current.status ? z.current.status : statusOf(p);
+      const color = colorOf(s);
+      if (!circles[z.id]) {
+        const c = new google.maps.Circle({
+          map, center: { lat: z.center.lat, lng: z.center.lng }, radius: 120,
+          strokeColor: color, strokeWeight: 2, fillColor: color, fillOpacity: 0.55
+        });
+        c.addListener('click', () => selectZone(z.id));
+        circles[z.id] = c;
+      } else {
+        circles[z.id].setOptions({ strokeColor: color, fillColor: color });
+      }
+    });
+  }
+
+  // ---- Live user location ----
+  function fmt(n) { return Math.round(n * 10000) / 10000; }
+
+  function placeYouMarker(loc) {
+    if (!state.mapReady) return;
+    const pos = { lat: loc.lat, lng: loc.lng };
+    if (!youMarker) {
+      youMarker = new google.maps.Marker({
+        map, position: pos, title: 'You are here',
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#2563eb', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 }
+      });
+    } else youMarker.setPosition(pos);
+    if (loc.accuracy && isFinite(loc.accuracy)) {
+      if (!accuracyCircle) accuracyCircle = new google.maps.Circle({ map, fillColor: '#2563eb', fillOpacity: 0.15, strokeColor: '#2563eb', strokeOpacity: 0.4 });
+      accuracyCircle.setCenter(pos);
+      accuracyCircle.setRadius(Math.min(loc.accuracy, 2000));
+    }
+  }
+
+  function locateMe() {
+    const statusEl = $('location-status');
+    if (!('geolocation' in navigator)) {
+      statusEl.textContent = 'Geolocation not supported — showing default area.';
+      return;
+    }
+    statusEl.textContent = 'Locating you…';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        state.userLocation = loc;
+        statusEl.textContent = `You are here ✓ (${fmt(loc.lat)}, ${fmt(loc.lng)})`;
+        if (state.mapReady && map) {
+          map.panTo({ lat: loc.lat, lng: loc.lng });
+          map.setZoom(15);
+          placeYouMarker(loc);
+        }
+      },
+      (err) => {
+        const why = err && err.code === 1 ? 'permission denied' : 'unavailable';
+        statusEl.textContent = `Location ${why} — showing default area. Tap 📍 to retry.`;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
 
   function renderPoints() {
     $('points-display').textContent = `${state.points} pts`;
@@ -74,19 +208,8 @@
     wrap.innerHTML = '';
     const sel = $('report-zone-select');
     sel.innerHTML = '';
-    Object.values(markers).forEach(m => { try { m.remove(); } catch {} });
-    markers = {};
     state.zones.forEach(z => {
       const p = probAt(z, state.horizonMin);
-      const s = z.current && state.horizonMin === 15 && z.current.status ? z.current.status : statusOf(p);
-      if (map) {
-        try {
-          const m = L.circleMarker([z.center.lat, z.center.lng], { radius: 14, color: colorOf(s), fillColor: colorOf(s), fillOpacity: 0.7 }).addTo(map);
-          m.bindTooltip(`${z.name} — ${Math.round(p * 100)}%`);
-          m.on('click', () => selectZone(z.id));
-          markers[z.id] = m;
-        } catch {}
-      }
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = `${z.name} ${Math.round(p * 100)}%`;
@@ -98,6 +221,7 @@
       sel.appendChild(o);
     });
     $('time-label').textContent = `+${state.horizonMin} min`;
+    syncCircles();
   }
 
   async function fetchZones() {
@@ -144,11 +268,12 @@
       bars.appendChild(d);
     });
     $('detail-extra').textContent = `Confidence ${(series[1] && series[1].confidence) || '—'} • Probability of finding a spot over next hours.`;
-    if (map) { try { map.setView([z.center.lat, z.center.lng], 15); } catch {} }
+    if (state.mapReady && map) { try { map.panTo({ lat: z.center.lat, lng: z.center.lng }); map.setZoom(15); } catch {} }
   }
 
   $('zone-detail-close').addEventListener('click', () => $('zone-detail').classList.add('hidden'));
   $('time-slider').addEventListener('input', (e) => { state.horizonMin = parseInt(e.target.value, 10); renderZones(); });
+  $('locate-me').addEventListener('click', locateMe);
 
   $('trip-search').addEventListener('click', async () => {
     const dest = $('trip-destination').value || 'downtown';
@@ -200,7 +325,7 @@
   $('report-circling').addEventListener('click', () => report('circling'));
 
   // expose for Playwright
-  window.__parkcast = { state, selectZone, report, fetchZones };
+  window.__parkcast = { state, selectZone, report, fetchZones, locateMe };
 
   // Default arrival = now + 60 min (rounded to 5 min) so Trip Planner works in one click.
   try {
@@ -213,4 +338,12 @@
   renderPoints();
   renderZones();
   fetchZones();
+
+  // Map boot: Google Maps when a key is present, setup notice otherwise.
+  const gkey = resolveApiKey();
+  if (gkey) loadGoogleMaps(gkey);
+  else showMapNotice(keySetupHtml('Live Google map needs an API key.'));
+
+  // Ask for the person's location right away (map centers on it once granted).
+  locateMe();
 })();

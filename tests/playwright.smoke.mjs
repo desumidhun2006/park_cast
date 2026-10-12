@@ -63,6 +63,12 @@ try {
   await page.screenshot({ path: `${shots}/01-slider-60.png` });
   await page.locator('[data-testid="time-slider"]').fill('15');
 
+  // google map toolbar + location status
+  check('locate-me button visible', await page.locator('[data-testid="locate-me"]').isVisible());
+  const locText = await page.locator('[data-testid="location-status"]').innerText();
+  check('location status shown', locText.length > 3, locText.slice(0, 70));
+  check('map shows key setup notice (no key in test env)', await page.locator('[data-testid="map-notice"]').isVisible());
+
   // every zone button
   const zoneBtns = await page.locator('[data-testid^="zone-marker-"]').count();
   check('6 zone buttons rendered', zoneBtns === 6, `${zoneBtns} found`);
@@ -97,6 +103,20 @@ try {
   const pts = await page.locator('[data-testid="points-display"]').innerText();
   check('gamification points accrue', parseInt(pts) >= 30, pts);
   await page.screenshot({ path: `${shots}/04-reported.png` });
+
+  // geolocation granted → map centers where the person is
+  const geoCtx = await browser.newContext({ viewport: { width: 1400, height: 900 }, geolocation: { latitude: 37.7749, longitude: -122.4194 }, permissions: ['geolocation'] });
+  const geoPage = await geoCtx.newPage();
+  geoPage.on('pageerror', e => errors.push('geo: ' + String(e)));
+  await geoPage.goto(`http://localhost:${FRONT_PORT}/?api=http://localhost:${BACKEND_PORT}`, { waitUntil: 'networkidle' });
+  await geoPage.locator('[data-testid="locate-me"]').click();
+  await geoPage.waitForFunction(() => window.__parkcast && window.__parkcast.state.userLocation !== null, { timeout: 8000 });
+  const ulo = await geoPage.evaluate(() => window.__parkcast.state.userLocation);
+  check('geolocation centers on user', Math.abs(ulo.lat - 37.7749) < 0.001 && Math.abs(ulo.lng + 122.4194) < 0.001, `${ulo.lat},${ulo.lng}`);
+  const uloText = await geoPage.locator('[data-testid="location-status"]').innerText();
+  check('location status shows you-are-here', /you are here/i.test(uloText), uloText.slice(0, 70));
+  await geoPage.screenshot({ path: `${shots}/05-geolocated.png` });
+  await geoCtx.close();
 
   check('no page errors', errors.length === 0, errors.slice(0,2).join(' | '));
   await browser.close();
