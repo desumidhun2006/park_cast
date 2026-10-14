@@ -35,3 +35,4 @@ Execution Frequency: This entire 5-step protocol must be repeated for every sing
 | dd991a7 | Google Maps home page + live location — replaced Leaflet/OSM with Maps JS API (key via ?gmaps_key=/localStorage/config.js, gitignored), hero-size map, auto geolocation centering + blue-dot marker + 📍 retry button, key/auth-failure notices; smoke extended to 26/26 PASS incl. granted+denied location paths |
 | 5e23a63 | API key guide — new docs/GOOGLE_MAPS_KEY.md (project, billing, enable API, create + restrict key, usage, troubleshooting); smoke re-run 26/26 PASS |
 | fa387e0 | Reopen project page — both servers were down, restarted backend :4000 (health ✓) + frontend :5173 (HTTP 200 ✓), opened http://localhost:5173 in browser |
+| 7351ba2 | Rename to Parkistics — rebranded site/services/packages/docs (title, header, API/ML service names, storage keys, test handle), renamed GitHub repo park_cast → parkistics + updated remote; smoke 26/26 PASS |
