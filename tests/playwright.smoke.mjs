@@ -1,4 +1,4 @@
-// Parkistics Playwright smoke test — operates EVERY interactive element.
+// Parkistics Playwright smoke test — operates EVERY interactive element on the Forecast page.
 // Run: npm --prefix backend install; node tests/playwright.smoke.mjs
 // Serves backend :4000 + frontend :5173, drives Chromium headless, screenshots to frontend-screenshots/.
 import { spawn } from 'node:child_process';
@@ -24,7 +24,6 @@ const backend = spawn('node', ['src/index.js'], { cwd: 'backend', env: { ...proc
 const front = spawn('npx', ['serve', '../frontend', '-l', String(FRONT_PORT)], { cwd: 'backend', stdio: 'pipe' });
 await waitFor(`http://localhost:${BACKEND_PORT}/health`);
 await wait(1500);
-// frontend via serve may take a moment; probe root
 try { await waitFor(`http://localhost:${FRONT_PORT}/`, 20000); } catch { console.log('frontend probe failed, continuing (test uses file + api checks)'); }
 
 const results = [];
@@ -44,7 +43,7 @@ try {
   check('GET /route ranked + saved time', rt.ranked && rt.ranked.length === 6 && typeof rt.searchTimeSavedMin === 'number');
 } catch (e) { check('backend API suite', false, e.message); }
 
-// 2. Playwright browser checks (every button / interactive element)
+// 2. Playwright browser checks (Forecast page + Zone details in Light Theme)
 let playwrightOk = false;
 try {
   const { chromium } = await import('playwright');
@@ -55,15 +54,33 @@ try {
   await page.goto(`http://localhost:${FRONT_PORT}/?api=http://localhost:${BACKEND_PORT}`, { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-testid="time-slider"]', { timeout: 15000 });
 
+  // light theme check
+  const isLight = await page.evaluate(() => document.documentElement.classList.contains('light'));
+  check('light theme active on html element', isLight);
+
+  // sidebar removed check (only forecast page exists)
+  const navCount = await page.locator('nav').count();
+  check('sidebar navigation removed', navCount === 0);
+
+  // forecast page is main view
+  const isForecastVisible = await page.locator('#view-forecast:not(.hidden)').isVisible();
+  check('forecast page is the active primary view', isForecastVisible);
+
   // time slider
   await page.locator('[data-testid="time-slider"]').fill('60');
   await page.waitForTimeout(600);
   const label60 = await page.locator('[data-testid="time-label"]').innerText();
   check('time slider updates label', label60.includes('60'), label60);
-  await page.screenshot({ path: `${shots}/01-slider-60.png` });
+  await page.screenshot({ path: `${shots}/01-slider-60-light.png` });
   await page.locator('[data-testid="time-slider"]').fill('15');
 
-  // location toolbar (denied path on default context)
+  // slider quick-step buttons
+  await page.locator('#slider-steps [data-h="30"]').click();
+  await page.waitForTimeout(400);
+  const label30 = await page.locator('[data-testid="time-label"]').innerText();
+  check('quick step button updates slider', label30.includes('30'), label30);
+
+  // location toolbar
   check('locate-me button visible', await page.locator('[data-testid="locate-me"]').isVisible());
   const locText = await page.locator('[data-testid="location-status"]').innerText();
   check('location status shown', locText.length > 3, locText.slice(0, 70));
@@ -79,50 +96,19 @@ try {
   check('6 zone buttons rendered', zoneBtns === 6, `${zoneBtns} found`);
   const ids = ['zone-mall-gateway','zone-campus-north','zone-telegraph','zone-station','zone-residential-south','zone-hospital-east'];
   for (const id of ids) {
-    await page.locator('[data-testid="nav-forecast"]').click();
     await page.locator(`[data-testid="zone-marker-${id}"]`).click();
     await page.waitForSelector('#view-zones:not(.hidden)', { timeout: 8000 });
     const name = await page.locator('#detail-name').innerText();
     check(`zone detail opens (${id})`, name.length > 2, name);
+    await page.locator('[data-testid="zone-detail-close"]').click();
+    await page.waitForSelector('#view-forecast:not(.hidden)', { timeout: 8000 });
   }
-  await page.screenshot({ path: `${shots}/02-zone-detail.png` });
-  await page.locator('[data-testid="zone-detail-close"]').click();
-  await page.waitForSelector('#view-forecast:not(.hidden)', { timeout: 8000 });
+  await page.screenshot({ path: `${shots}/02-zone-detail-light.png` });
   check('zone detail closes back to forecast', await page.locator('#view-forecast:not(.hidden)').count() === 1);
 
-  // bottom nav switches all four views
-  for (const [nav, view] of [['nav-planner','view-planner'],['nav-badges','view-badges'],['nav-zones','view-zones'],['nav-forecast','view-forecast']]) {
-    await page.locator(`[data-testid="${nav}"]`).click();
-    check(`nav ${nav} shows ${view}`, await page.locator(`#${view}:not(.hidden)`).count() === 1);
-  }
-
-  // trip planner (live GET /api/route)
-  await page.locator('[data-testid="nav-planner"]').click();
-
-  // trip planner (hint text shows first; wait for search-completion marker)
-  await page.locator('[data-testid="trip-origin"]').fill('Campus');
-  await page.locator('[data-testid="trip-destination"]').fill('Gateway Mall');
-  await page.locator('[data-testid="trip-search"]').click();
-  await page.waitForSelector('#saved-banner:not(.hidden)', { timeout: 15000 });
-  const nResults = await page.locator('#trip-results .result').count();
-  check('trip planner returns results', nResults >= 4, `${nResults} rows`);
-  await page.screenshot({ path: `${shots}/03-trip.png` });
-
-  // crowd reports (all three, live POST /api/reports)
-  await page.locator('[data-testid="nav-badges"]').click();
-  for (const sig of ['found','full','circling']) {
-    await page.locator('[data-testid="report-zone-select"]').selectOption('zone-station');
-    const before = await page.locator('[data-testid="points-display"]').innerText();
-    await page.locator(`[data-testid="report-${sig}"]`).click();
-    await page.waitForFunction((b) => document.getElementById('points-display').innerText !== b, before, { timeout: 8000 });
-    const st = await page.locator('#confirm-message-text').innerText();
-    check(`report button (${sig})`, /recorded/i.test(st), st.slice(0, 60));
-  }
-  const feedYou = await page.locator('#activity-feed-list').innerText();
-  check('community stream shows my reports', /you/i.test(feedYou));
-  const pts = await page.locator('[data-testid="points-display"]').innerText();
-  check('gamification points accrue', parseInt(pts) >= 30, pts);
-  await page.screenshot({ path: `${shots}/04-reported.png` });
+  // recommendation card
+  const recoText = await page.locator('#reco-title').innerText();
+  check('recommendation card shows best zone', recoText.length > 2, recoText);
 
   // geolocation granted → map centers where the person is
   const geoCtx = await browser.newContext({ viewport: { width: 1400, height: 900 }, geolocation: { latitude: 37.7749, longitude: -122.4194 }, permissions: ['geolocation'] });
@@ -135,7 +121,7 @@ try {
   check('geolocation centers on user', Math.abs(ulo.lat - 37.7749) < 0.001 && Math.abs(ulo.lng + 122.4194) < 0.001, `${ulo.lat},${ulo.lng}`);
   const uloText = await geoPage.locator('[data-testid="location-status"]').innerText();
   check('location status shows you-are-here', /you are here/i.test(uloText), uloText.slice(0, 70));
-  await geoPage.screenshot({ path: `${shots}/05-geolocated.png` });
+  await geoPage.screenshot({ path: `${shots}/03-forecast-light.png` });
   await geoCtx.close();
 
   check('no page errors', errors.length === 0, errors.slice(0,2).join(' | '));
@@ -145,8 +131,11 @@ try {
   check('playwright browser suite', false, e.message);
 }
 
-backend.kill(); front.kill();
-const failed = results.filter(r => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed.`);
-if (failed.length) { console.log('FAILED:', failed.map(f => f.name).join(', ')); process.exit(1); }
-console.log(playwrightOk ? 'ALL TESTS 100% PASS' : 'API passed, browser partial — see above');
+try { backend.kill(); } catch {}
+try { front.kill(); } catch {}
+const nPass = results.filter(r => r.ok).length;
+const nTotal = results.length;
+console.log(`\n========================================`);
+console.log(`SMOKE SUMMARY: ${nPass}/${nTotal} PASS (${Math.round(nPass/nTotal*100)}%)`);
+console.log(`========================================`);
+process.exit(nPass === nTotal ? 0 : 1);

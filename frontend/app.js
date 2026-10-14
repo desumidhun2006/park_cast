@@ -57,11 +57,12 @@
   }
 
   // ---------- view router ----------
-  const VIEWS = ['view-forecast', 'view-zones', 'view-planner', 'view-badges'];
+  const VIEWS = ['view-forecast', 'view-zones'];
   const VIEW_LABELS = { 'view-forecast': '• Forecast', 'view-zones': '• Zone Details', 'view-planner': '• Trip Planner', 'view-badges': '• Crowd Report & Badges' };
   function showView(id) {
     VIEWS.forEach(v => {
       const el = $(v);
+      if (!el) return;
       const on = v === id;
       el.classList.toggle('hidden', !on);
       el.classList.toggle('flex', on);
@@ -72,9 +73,9 @@
       b.classList.toggle('bg-surface-container-high', on);
       b.classList.toggle('text-on-surface-variant', !on);
     });
-    $('view-label').textContent = VIEW_LABELS[id] || '';
+    const vl = $('view-label');
+    if (vl) vl.textContent = VIEW_LABELS[id] || '';
     window.scrollTo(0, 0);
-    if (id === 'view-badges') renderFeed();
   }
 
   // ---------- header / gamification (real points from confirmed reports) ----------
@@ -86,26 +87,28 @@
   }
   function renderPoints() {
     const t = tierOf(state.points);
-    $('points-display').textContent = `${state.points} pts`;
-    $('badges-display').textContent = t.name || 'No badges yet';
-    $('tier-name').textContent = t.tier;
-    $('tier-sub').textContent = t.next ? `${state.points} / ${t.next} pts to ${t.next === 10 ? 'Reporter' : t.next === 50 ? 'Contributor' : 'Scout'}` : `${state.points} pts · max rank`;
+    if ($('points-display')) $('points-display').textContent = `${state.points} pts`;
+    if ($('badges-display')) $('badges-display').textContent = t.name || 'No badges yet';
+    if ($('tier-name')) $('tier-name').textContent = t.tier;
+    if ($('tier-sub')) $('tier-sub').textContent = t.next ? `${state.points} / ${t.next} pts to ${t.next === 10 ? 'Reporter' : t.next === 50 ? 'Contributor' : 'Scout'}` : `${state.points} pts · max rank`;
     const pct = t.next ? Math.min(100, Math.round((state.points / t.next) * 100)) : 100;
-    $('reputation-progress-bar').style.width = pct + '%';
-    $('stat-reports-count').textContent = String(state.myReports.length);
-    $('stat-points').textContent = String(state.points);
-    $('stat-rank').textContent = t.name || 'Rookie';
+    if ($('reputation-progress-bar')) $('reputation-progress-bar').style.width = pct + '%';
+    if ($('stat-reports-count')) $('stat-reports-count').textContent = String(state.myReports.length);
+    if ($('stat-points')) $('stat-points').textContent = String(state.points);
+    if ($('stat-rank')) $('stat-rank').textContent = t.name || 'Rookie';
     const tiers = [
       { name: 'Reporter', at: 10 }, { name: 'Contributor', at: 50 }, { name: 'Scout', at: 100 }
     ];
-    $('milestones').innerHTML = tiers.map(ti => {
-      const unlocked = state.points >= ti.at;
-      const current = !unlocked && state.points >= (ti.at === 10 ? 0 : ti.at === 50 ? 10 : 50) && state.points < ti.at;
-      const color = unlocked ? 'text-primary' : current ? 'text-tertiary' : 'text-on-surface-variant';
-      const icon = unlocked ? 'check_circle' : current ? 'pending' : 'lock';
-      const sub = unlocked ? `${ti.at} pts · Unlocked` : `${ti.at} pts · ${Math.max(0, ti.at - state.points)} to go`;
-      return `<div class="flex flex-col items-center"><div class="flex items-center gap-0.5 ${color}"><span class="material-symbols-outlined text-[14px]">${icon}</span><span class="font-label-sm text-label-sm font-bold">${ti.name}</span></div><span class="font-body-sm text-body-sm text-on-surface-variant">${sub}</span></div>`;
-    }).join('');
+    if ($('milestones')) {
+      $('milestones').innerHTML = tiers.map(ti => {
+        const unlocked = state.points >= ti.at;
+        const current = !unlocked && state.points >= (ti.at === 10 ? 0 : ti.at === 50 ? 10 : 50) && state.points < ti.at;
+        const color = unlocked ? 'text-primary' : current ? 'text-tertiary' : 'text-on-surface-variant';
+        const icon = unlocked ? 'check_circle' : current ? 'pending' : 'lock';
+        const sub = unlocked ? `${ti.at} pts · Unlocked` : `${ti.at} pts · ${Math.max(0, ti.at - state.points)} to go`;
+        return `<div class="flex flex-col items-center"><div class="flex items-center gap-0.5 ${color}"><span class="material-symbols-outlined text-[14px]">${icon}</span><span class="font-label-sm text-label-sm font-bold">${ti.name}</span></div><span class="font-body-sm text-body-sm text-on-surface-variant">${sub}</span></div>`;
+      }).join('');
+    }
   }
 
   // ---------- map (Leaflet + OpenStreetMap, zone pills as live divIcons) ----------
@@ -256,14 +259,15 @@
 
   async function refreshReco() {
     try {
-      const data = await api(`/api/route?destination=${encodeURIComponent($('trip-destination').value || 'downtown')}&time=${encodeURIComponent(new Date().toISOString())}`);
+      const dest = $('trip-destination')?.value || 'downtown';
+      const data = await api(`/api/route?destination=${encodeURIComponent(dest)}&time=${encodeURIComponent(new Date().toISOString())}`);
       const best = data.ranked[0];
-      $('reco-title').textContent = `${best.name} Recommended`;
-      $('reco-sub').textContent = `${Math.round(best.probability * 100)}% chance • ~${best.expectedSearchMin} min search • ${best.walkMinutes} min walk`;
-      $('reco-route').onclick = () => window.open(dirHref(best.center.lat, best.center.lng), '_blank');
+      if ($('reco-title')) $('reco-title').textContent = `${best.name} Recommended`;
+      if ($('reco-sub')) $('reco-sub').textContent = `${Math.round(best.probability * 100)}% chance • ~${best.expectedSearchMin} min search • ${best.walkMinutes} min walk`;
+      if ($('reco-route')) $('reco-route').onclick = () => window.open(dirHref(best.center.lat, best.center.lng), '_blank');
     } catch {
-      $('reco-title').textContent = 'Recommendation unavailable';
-      $('reco-sub').textContent = 'backend unreachable';
+      if ($('reco-title')) $('reco-title').textContent = 'Recommendation unavailable';
+      if ($('reco-sub')) $('reco-sub').textContent = 'backend unreachable';
     }
   }
 
@@ -271,14 +275,16 @@
     const data = await api('/api/zones');
     state.zones = data.zones;
     state.apiOk = true;
-    $('api-status').textContent = `API: ${API_BASE} ✓ · ${data.count} zones live`;
+    if ($('api-status')) $('api-status').textContent = `API: ${API_BASE} ✓ · ${data.count} zones live`;
     const sel = $('report-zone-select');
-    sel.innerHTML = '';
-    state.zones.forEach(z => {
-      const o = document.createElement('option');
-      o.value = z.id; o.textContent = z.name;
-      sel.appendChild(o);
-    });
+    if (sel) {
+      sel.innerHTML = '';
+      state.zones.forEach(z => {
+        const o = document.createElement('option');
+        o.value = z.id; o.textContent = z.name;
+        sel.appendChild(o);
+      });
+    }
     await refreshForecastBoard();
     await refreshReco();
   }
@@ -451,6 +457,7 @@
 
   async function renderFeed() {
     const feed = $('activity-feed-list');
+    if (!feed) return;
     try {
       const data = await api('/api/reports');
       if (!data.reports.length) {
@@ -476,28 +483,33 @@
   }
 
   async function report(signal) {
-    const zoneId = $('report-zone-select').value || (state.zones[0] && state.zones[0].id);
+    const sel = $('report-zone-select');
+    const zoneId = (sel && sel.value) || (state.zones[0] && state.zones[0].id);
     try {
       const j = await api('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zoneId, signal }) });
       state.myReports.unshift({ id: j.id, zoneId, signal, at: j.at, points: j.pointsAwarded || 0 });
       state.points = state.myReports.reduce((s, r) => s + (r.points || 0), 0);
       saveReports();
       renderPoints();
-      $('confirm-pts-badge').textContent = `+${j.pointsAwarded || 0} pts`;
+      if ($('confirm-pts-badge')) $('confirm-pts-badge').textContent = `+${j.pointsAwarded || 0} pts`;
       const z = zoneById(zoneId);
-      $('confirm-message-text').textContent = `Report ${j.id} recorded for ${z ? z.name : zoneId} — models updated for this horizon.`;
+      if ($('confirm-message-text')) $('confirm-message-text').textContent = `Report ${j.id} recorded for ${z ? z.name : zoneId} — models updated for this horizon.`;
       const banner = $('confirmation-banner');
-      banner.classList.remove('hidden');
-      banner.classList.add('flex');
+      if (banner) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+      }
       renderFeed();
       await refreshForecastBoard();
       await refreshReco();
     } catch {
-      $('confirm-pts-badge').textContent = '+0 pts';
-      $('confirm-message-text').textContent = 'Report failed — backend unreachable. Retry.';
+      if ($('confirm-pts-badge')) $('confirm-pts-badge').textContent = '+0 pts';
+      if ($('confirm-message-text')) $('confirm-message-text').textContent = 'Report failed — backend unreachable. Retry.';
       const banner = $('confirmation-banner');
-      banner.classList.remove('hidden');
-      banner.classList.add('flex');
+      if (banner) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+      }
     }
   }
 
@@ -505,34 +517,38 @@
   document.querySelectorAll('nav [data-view]').forEach(b => {
     b.addEventListener('click', () => showView(b.getAttribute('data-view')));
   });
-  $('zone-detail-close').addEventListener('click', () => showView('view-forecast'));
-  $('recenter-gps-btn').addEventListener('click', locateMe);
-  $('time-slider').addEventListener('input', (e) => {
+  $('zone-detail-close')?.addEventListener('click', () => showView('view-forecast'));
+  $('recenter-gps-btn')?.addEventListener('click', locateMe);
+  $('time-slider')?.addEventListener('input', (e) => {
     state.horizonMin = parseInt(e.target.value, 10);
     refreshForecastBoard();
   });
   document.querySelectorAll('#slider-steps [data-h]').forEach(el => {
     el.addEventListener('click', () => {
-      $('time-slider').value = el.getAttribute('data-h');
+      const ts = $('time-slider');
+      if (ts) ts.value = el.getAttribute('data-h');
       state.horizonMin = parseInt(el.getAttribute('data-h'), 10);
       refreshForecastBoard();
     });
   });
-  $('trip-search').addEventListener('click', runTripSearch);
-  $('max-walk').addEventListener('click', () => {
+  $('trip-search')?.addEventListener('click', runTripSearch);
+  $('max-walk')?.addEventListener('click', () => {
     const i = (WALK_OPTIONS.indexOf(state.maxWalk) + 1) % WALK_OPTIONS.length;
     state.maxWalk = WALK_OPTIONS[i];
-    $('max-walk-val').textContent = `< ${state.maxWalk} min`;
+    if ($('max-walk-val')) $('max-walk-val').textContent = `< ${state.maxWalk} min`;
     if (state.lastRoute) runTripSearch();
   });
-  $('report-found').addEventListener('click', () => report('found'));
-  $('report-full').addEventListener('click', () => report('full'));
-  $('report-circling').addEventListener('click', () => report('circling'));
-  $('confirm-dismiss').addEventListener('click', () => {
-    $('confirmation-banner').classList.add('hidden');
-    $('confirmation-banner').classList.remove('flex');
+  $('report-found')?.addEventListener('click', () => report('found'));
+  $('report-full')?.addEventListener('click', () => report('full'));
+  $('report-circling')?.addEventListener('click', () => report('circling'));
+  $('confirm-dismiss')?.addEventListener('click', () => {
+    const banner = $('confirmation-banner');
+    if (banner) {
+      banner.classList.add('hidden');
+      banner.classList.remove('flex');
+    }
   });
-  $('alert-btn').addEventListener('click', () => {
+  $('alert-btn')?.addEventListener('click', () => {
     if (!state.selectedId) return;
     try {
       const cur = JSON.parse(localStorage.getItem('ps_alert') || 'null');
@@ -541,18 +557,21 @@
     } catch {}
     renderAlertState();
   });
-  $('api-retry').addEventListener('click', boot);
-  $('reco-route').addEventListener('click', () => {});
+  $('api-retry')?.addEventListener('click', boot);
+  $('reco-route')?.addEventListener('click', () => {});
 
   // expose for Playwright
   window.__parkistics = { state, selectZone, report, fetchZones: boot, locateMe, showView, runTripSearch };
 
   // Default arrival = now + 60 min so Trip Planner works in one click.
   try {
-    const t = new Date(Date.now() + 60 * 60000);
-    t.setMinutes(Math.round(t.getMinutes() / 5) * 5, 0, 0);
-    const pad = (n) => String(n).padStart(2, '0');
-    $('trip-time').value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    const tripTimeEl = $('trip-time');
+    if (tripTimeEl) {
+      const t = new Date(Date.now() + 60 * 60000);
+      t.setMinutes(Math.round(t.getMinutes() / 5) * 5, 0, 0);
+      const pad = (n) => String(n).padStart(2, '0');
+      tripTimeEl.value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    }
   } catch {}
 
   renderPoints();
