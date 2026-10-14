@@ -11,431 +11,588 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
 /* ================================================================
-   PARKISTICS — Insane Glassmorphism Design System
+   PARKISTICS — Insane Glassmorphism Design System v3
+   Strict adherence to specifications:
+     • Background    : Deep obsidian space with multi-color mesh gradients
+                       (cyan, magenta, emerald, amber, cobalt, crimson)
+                       + 6 animated drifting gradient blobs (mix-blend-mode: screen)
+                       + micro-texture refraction dot grid.
+     • Panel Opacity : 10% – 25% (elements remain genuinely translucent glass,
+                       never opaque blocks). Main views forced transparent.
+     • Backdrop Blur : Explicit 16px – 20px blur with webkit prefix & saturation boost.
+     • Rim / Border  : Optical refraction rim with chromatic aberration dispersion
+                       (cyan left, magenta right, specular top highlight, bevel shadow)
+                       + prismatic masked gradient rim border.
    ================================================================ */
 
 /* --- Reset & Base --- */
 @layer base {
-  html, body { width:100vw; margin:0; padding:0; color:#dae2fd; }
-  body { overscroll-behavior:none; }
-  .pb-safe { padding-bottom:env(safe-area-inset-bottom,0px); }
-  .pt-safe { padding-top:env(safe-area-inset-top,0px); }
-  main>:first-child { margin-top:0!important; }
-  main>:last-child { margin-bottom:0!important; }
+  html, body {
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    color: #dae2fd;
+  }
+  body {
+    overscroll-behavior: none;
+  }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  main > :first-child { margin-top: 0 !important; }
+  main > :last-child  { margin-bottom: 0 !important; }
 }
-::-webkit-scrollbar { display:none; }
-* { scrollbar-width:none; scroll-behavior:smooth; }
-input[type=range] { accent-color:#4be277; }
-#map .leaflet-container { background:#060a14; font:inherit; }
 
-/* --- Ambient Background --- */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; scroll-behavior: smooth; }
+input[type=range] { accent-color: #4be277; }
+#map .leaflet-container { background: #02040d; font: inherit; }
+
+/* ================================================================
+   CANVAS & TEXTURED MESH BACKGROUND
+   Multi-chromatic mesh canvas ensuring glass blur has rich textures to refract
+   ================================================================ */
 body {
-  background:#060a14!important;
+  background: #030712 !important;
   background-image:
-    radial-gradient(ellipse 900px 700px at 88% 2%,  rgba(75,226,119,0.11) 0%, transparent 62%),
-    radial-gradient(ellipse 700px 550px at 3%  88%, rgba(148,70,255,0.09) 0%, transparent 62%),
-    radial-gradient(ellipse 500px 400px at 50% 45%, rgba(0,83,219,0.07)   0%, transparent 62%),
-    radial-gradient(ellipse 320px 280px at 22% 12%, rgba(247,191,30,0.05) 0%, transparent 55%) !important;
-  background-attachment:fixed!important;
+    /* Vivid Cyan high light (top right) */
+    radial-gradient(ellipse 950px 700px at 92% -8%, rgba(0, 240, 255, 0.28) 0%, transparent 62%),
+    /* Hot Magenta / Electric Violet surge (bottom left) */
+    radial-gradient(ellipse 850px 650px at -6% 96%, rgba(217, 70, 239, 0.26) 0%, transparent 62%),
+    /* Electric Cobalt center depth */
+    radial-gradient(ellipse 750px 580px at 52% 48%, rgba(37, 99, 235, 0.22) 0%, transparent 64%),
+    /* Radiant Amber / Gold accent (top left) */
+    radial-gradient(ellipse 520px 420px at 12% 14%, rgba(255, 170, 0, 0.20) 0%, transparent 56%),
+    /* Crimson flame (mid right) */
+    radial-gradient(ellipse 560px 440px at 88% 64%, rgba(244, 63, 94, 0.18) 0%, transparent 56%),
+    /* Neon Emerald / Mint base (bottom center) */
+    radial-gradient(ellipse 680px 500px at 46% 94%, rgba(0, 255, 136, 0.18) 0%, transparent 60%),
+    /* Fine micro-facet texture for glass refraction */
+    radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px) !important;
+  background-size: auto, auto, auto, auto, auto, auto, 24px 24px !important;
+  background-attachment: fixed !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Force all mains and view wrappers to stay 100% transparent so the background shines through! */
+main,
+#view-forecast,
+#view-zones,
+#view-planner,
+#view-badges,
+.bg-surface:not(header):not(nav) {
+  background: transparent !important;
 }
 
 /* ================================================================
-   AMBIENT BLOBS
+   ANIMATED MESH BLOBS (Vivid multi-color drifting orbs)
    ================================================================ */
-@keyframes blob-drift {
-  0%,100% { transform:translate(0,0) scale(1); }
-  30%      { transform:translate(40px,-25px) scale(1.06); }
-  65%      { transform:translate(-25px,18px) scale(0.95); }
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33%      { transform: translate(65px, -45px) scale(1.10) rotate(12deg); }
+  66%      { transform: translate(-45px, 35px) scale(0.92) rotate(-8deg); }
 }
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-55px, -50px) scale(1.12); }
+}
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-46%, -54%) scale(1.08); }
+}
+
 .pk-blob {
-  position:fixed; border-radius:50%;
-  filter:blur(90px) saturate(1.4);
-  pointer-events:none; z-index:0;
-  animation:blob-drift 14s ease-in-out infinite;
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px) saturate(220%) brightness(1.18);
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: screen;
+  will-change: transform;
 }
 .pk-blob-1 {
-  width:700px; height:560px;
-  background:radial-gradient(circle, rgba(75,226,119,0.14) 0%, transparent 70%);
-  top:-120px; right:-100px;
-  animation-delay:0s;
+  width: 700px; height: 560px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.60) 0%, rgba(37, 99, 235, 0.30) 55%, transparent 75%);
+  top: -120px; right: -90px;
+  animation: blob-drift-1 18s ease-in-out infinite;
 }
 .pk-blob-2 {
-  width:580px; height:460px;
-  background:radial-gradient(circle, rgba(148,70,255,0.11) 0%, transparent 70%);
-  bottom:-100px; left:-80px;
-  animation-delay:-5s;
+  width: 640px; height: 520px;
+  background: radial-gradient(circle, rgba(217, 70, 239, 0.55) 0%, rgba(244, 63, 94, 0.28) 55%, transparent 75%);
+  bottom: -90px; left: -80px;
+  animation: blob-drift-2 22s ease-in-out infinite reverse;
 }
 .pk-blob-3 {
-  width:460px; height:380px;
-  background:radial-gradient(circle, rgba(0,83,219,0.09) 0%, transparent 70%);
-  top:45%; left:42%;
-  transform:translate(-50%,-50%);
-  animation-delay:-9s;
+  width: 520px; height: 440px;
+  background: radial-gradient(circle, rgba(0, 255, 136, 0.50) 0%, rgba(0, 200, 255, 0.22) 55%, transparent 72%);
+  top: 48%; left: 45%;
+  animation: blob-drift-3 16s ease-in-out infinite;
 }
 .pk-blob-4 {
-  width:300px; height:260px;
-  background:radial-gradient(circle, rgba(247,191,30,0.07) 0%, transparent 65%);
-  top:18%; left:25%;
-  animation-delay:-3s;
+  width: 420px; height: 360px;
+  background: radial-gradient(circle, rgba(255, 170, 0, 0.50) 0%, rgba(255, 60, 100, 0.22) 55%, transparent 70%);
+  top: 14%; left: 18%;
+  animation: blob-drift-1 20s ease-in-out infinite -5s;
+}
+.pk-blob-5 {
+  width: 460px; height: 380px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.52) 0%, rgba(217, 70, 239, 0.22) 55%, transparent 72%);
+  bottom: 18%; right: 12%;
+  animation: blob-drift-2 24s ease-in-out infinite -9s;
+}
+.pk-blob-6 {
+  width: 380px; height: 320px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.45) 0%, rgba(59, 130, 246, 0.20) 55%, transparent 70%);
+  top: 60%; left: 8%;
+  animation: blob-drift-1 26s ease-in-out infinite -12s;
 }
 
 /* ================================================================
-   GLASS CORE — Hierarchy
+   GLASSMORPHISM HIERARCHY — 10% to 25% Opacity, 16px to 20px Blur
+   With Distorted Glass Edge & Chromatic Aberration Rim
    ================================================================ */
 
-/* Level 1 — Standard glass panel */
-.bg-surface-container {
-  background:rgba(14,21,42,0.58)!important;
-  backdrop-filter:blur(28px) saturate(160%) brightness(1.08)!important;
-  -webkit-backdrop-filter:blur(28px) saturate(160%) brightness(1.08)!important;
-  border:1px solid rgba(255,255,255,0.075)!important;
+/* Level 1: Standard Glass Panel (Cards, Sections, Results) */
+.bg-surface-container,
+article.result {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   box-shadow:
-    0 8px 40px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.09),
-    inset 0 -1px 0 rgba(0,0,0,0.22)!important;
-  transition:background .25s ease, border-color .25s ease, box-shadow .25s ease, transform .25s cubic-bezier(.34,1.56,.64,1)!important;
+    /* Specular top highlight: sharp reflection along top bevel */
+    inset 0 1.5px 0.5px 0 rgba(255, 255, 255, 0.45),
+    /* Left refractive edge: cyan chromatic dispersion */
+    inset 1.5px 0 1px 0 rgba(0, 240, 255, 0.35),
+    /* Right refractive edge: magenta chromatic dispersion */
+    inset -1.5px 0 1px 0 rgba(217, 70, 239, 0.30),
+    /* Bottom bevel shadow: internal reflection cut-off */
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.42),
+    /* Internal diffuse dispersion */
+    inset 0 0 14px 0 rgba(255, 255, 255, 0.04),
+    /* Outer chromatic halo / distorted glass rim */
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    -1px -1px 3px 0 rgba(0, 240, 255, 0.14),
+    1px 1px 3px 0 rgba(217, 70, 239, 0.14),
+    /* Ambient depth shadow */
+    0 12px 36px 0 rgba(0, 0, 0, 0.48) !important;
+  position: relative;
+  transition: background .25s ease, border-color .25s ease,
+              box-shadow .25s ease, transform .25s cubic-bezier(.34,1.56,.64,1) !important;
 }
 
-/* Level 2 — Elevated glass */
-.bg-surface-container-high, .bg-surface-container-highest {
-  background:rgba(22,32,58,0.52)!important;
-  backdrop-filter:blur(22px) saturate(150%)!important;
-  -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
-  border:1px solid rgba(255,255,255,0.065)!important;
-  box-shadow:
-    0 4px 24px rgba(0,0,0,0.45),
-    inset 0 1px 0 rgba(255,255,255,0.07)!important;
-  transition:background .2s ease, border-color .2s ease, box-shadow .2s ease!important;
+/* Distorted Prismatic Rim (1px gradient edge mask) */
+.bg-surface-container::before,
+article.result::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(0, 240, 255, 0.42) 22%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(217, 70, 239, 0.38) 78%,
+    rgba(0, 0, 0, 0.48) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* Level 3 — Deep glass */
+/* Hover: Interactive Glass Response */
+.bg-surface-container:hover,
+article.result:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    inset 0 1.5px 0.5px 0 rgba(255, 255, 255, 0.60),
+    inset 2px 0 1px 0 rgba(0, 240, 255, 0.48),
+    inset -2px 0 1px 0 rgba(217, 70, 239, 0.42),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 18px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(75, 226, 119, 0.22),
+    -2px -2px 6px 0 rgba(0, 240, 255, 0.24),
+    2px 2px 6px 0 rgba(217, 70, 239, 0.22),
+    0 16px 48px 0 rgba(0, 0, 0, 0.55) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Level 2: Elevated Glass (Pills, Chips, Popovers) */
+.bg-surface-container-high,
+.bg-surface-container-highest {
+  background: rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.35),
+    inset 1px 0 0 0 rgba(0, 240, 255, 0.25),
+    inset -1px 0 0 0 rgba(217, 70, 239, 0.20),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.30),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 6px 24px rgba(0, 0, 0, 0.42) !important;
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+}
+
+/* Level 3: Deep Glass / Troughs (Recessed areas, feed items) */
 .bg-surface-container-low {
-  background:rgba(9,15,32,0.62)!important;
-  backdrop-filter:blur(18px) saturate(140%)!important;
-  -webkit-backdrop-filter:blur(18px) saturate(140%)!important;
-  border:1px solid rgba(255,255,255,0.055)!important;
-  box-shadow:0 4px 20px rgba(0,0,0,0.5)!important;
-}
-.bg-surface-container-lowest {
-  background:rgba(5,10,22,0.72)!important;
-  backdrop-filter:blur(14px)!important;
-  -webkit-backdrop-filter:blur(14px)!important;
-  border:1px solid rgba(255,255,255,0.04)!important;
+  background: rgba(0, 0, 0, 0.18) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 4px 18px rgba(0, 0, 0, 0.42) !important;
 }
 
-/* Glass hover lift for card containers */
-.bg-surface-container:hover {
-  background:rgba(20,30,56,0.68)!important;
-  border-color:rgba(255,255,255,0.12)!important;
+.bg-surface-container-lowest {
+  background: rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow:
-    0 16px 60px rgba(0,0,0,0.55),
-    0 0 0 1px rgba(75,226,119,0.09),
-    inset 0 1px 0 rgba(255,255,255,0.13)!important;
-  transform:translateY(-2px)!important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
 }
 
 /* ================================================================
-   HEADER — Ultra glass
+   HEADER & NAVIGATION — Translucent Dark Glass (22% - 24% fill)
    ================================================================ */
 header {
-  background:rgba(6,10,20,0.68)!important;
-  backdrop-filter:blur(48px) saturate(200%) brightness(1.05)!important;
-  -webkit-backdrop-filter:blur(48px) saturate(200%) brightness(1.05)!important;
-  border-bottom:1px solid rgba(255,255,255,0.07)!important;
+  background: rgba(8, 14, 28, 0.22) !important;
+  backdrop-filter: blur(20px) saturate(200%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(200%) brightness(1.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
   box-shadow:
-    0 4px 40px rgba(0,0,0,0.6),
-    0 1px 0 rgba(255,255,255,0.05)!important;
-  z-index:50!important;
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(0, 240, 255, 0.10),
+    0 8px 36px rgba(0, 0, 0, 0.55) !important;
+  z-index: 50 !important;
 }
 
-/* Live dot glow */
 #api-dot {
-  box-shadow:0 0 6px rgba(75,226,119,.9), 0 0 16px rgba(75,226,119,.5)!important;
+  box-shadow: 0 0 6px rgba(75, 226, 119, 0.95), 0 0 16px rgba(75, 226, 119, 0.6) !important;
+}
+#points-display { text-shadow: 0 0 12px rgba(75, 226, 119, 0.7); }
+#badges-display { text-shadow: 0 0 12px rgba(180, 197, 255, 0.6); }
+
+/* Header chips */
+header .bg-surface-container-high {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20) !important;
 }
 
-/* Points & badges chips */
-#points-display { text-shadow:0 0 14px rgba(75,226,119,.6); }
-#badges-display { text-shadow:0 0 14px rgba(180,197,255,.5); }
-
-/* ================================================================
-   BOTTOM NAV (mobile) → SIDEBAR (desktop)
-   ================================================================ */
 nav {
-  background:rgba(6,10,20,0.78)!important;
-  backdrop-filter:blur(48px) saturate(200%)!important;
-  -webkit-backdrop-filter:blur(48px) saturate(200%)!important;
-  border-top:1px solid rgba(255,255,255,0.07)!important;
-  box-shadow:0 -8px 48px rgba(0,0,0,.65), 0 -1px 0 rgba(255,255,255,.04)!important;
-  z-index:45!important;
+  background: rgba(8, 14, 28, 0.24) !important;
+  backdrop-filter: blur(20px) saturate(200%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(200%) brightness(1.08) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 -8px 40px rgba(0, 0, 0, 0.60) !important;
+  z-index: 45 !important;
 }
 
-/* Active nav button glow */
+/* Active Nav Button: Green Glass Pill */
 nav button[class*="bg-surface-container-high"] {
-  background:rgba(75,226,119,0.13)!important;
-  border:1px solid rgba(75,226,119,0.22)!important;
-  box-shadow:0 0 24px rgba(75,226,119,0.16), inset 0 1px 0 rgba(75,226,119,.18)!important;
+  background: rgba(75, 226, 119, 0.16) !important;
+  border: 1px solid rgba(75, 226, 119, 0.35) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0 0 24px rgba(75, 226, 119, 0.25) !important;
 }
 nav button[class*="bg-surface-container-high"] .material-symbols-outlined {
-  filter:drop-shadow(0 0 6px rgba(75,226,119,.8));
+  filter: drop-shadow(0 0 6px rgba(75, 226, 119, 0.9));
 }
 
-/* Sidebar brand mark (desktop only) */
-#pk-sidebar-brand {
-  display:none;
-}
+#pk-sidebar-brand { display: none; }
 
-/* ---- DESKTOP SIDEBAR ≥ 900px ---- */
-@media (min-width:900px) {
-  /* Sidebar nav */
+/* Desktop sidebar ≥ 900px */
+@media (min-width: 900px) {
   nav {
-    top:0!important; bottom:0!important;
-    left:0!important; right:auto!important;
-    width:220px!important;
-    height:100dvh!important;
-    border-top:none!important;
-    border-right:1px solid rgba(255,255,255,0.07)!important;
-    border-bottom:none!important;
-    box-shadow:4px 0 48px rgba(0,0,0,0.55)!important;
-    padding:0 12px 32px!important;
-    padding-top:80px!important;
-    overflow-y:auto;
-    display:flex!important;
-    flex-direction:column!important;
-    justify-content:flex-start!important;
-    align-items:stretch!important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 220px !important;
+    height: 100dvh !important;
+    border-top: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-bottom: none !important;
+    box-shadow:
+      inset -1px 0 0 rgba(255, 255, 255, 0.08),
+      6px 0 48px rgba(0, 0, 0, 0.60) !important;
+    padding: 0 12px 32px !important;
+    padding-top: 80px !important;
+    overflow-y: auto;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
-  /* Nav inner grid → vertical stack */
   nav > div.grid {
-    display:flex!important;
-    flex-direction:column!important;
-    gap:4px!important;
-    width:100%!important;
-    height:auto!important;
-    padding:0!important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
   }
-  /* Nav buttons — horizontal pill */
   nav button {
-    flex-direction:row!important;
-    justify-content:flex-start!important;
-    height:48px!important;
-    border-radius:14px!important;
-    padding:0 16px!important;
-    gap:14px!important;
-    width:100%!important;
-    max-width:100%!important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    padding: 0 16px !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   nav button .font-label-sm {
-    font-size:14px!important;
-    letter-spacing:0!important;
-    font-weight:600!important;
-    white-space:nowrap;
+    font-size: 14px !important;
+    letter-spacing: 0 !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
   }
-  /* Sidebar brand */
   #pk-sidebar-brand {
-    display:flex!important;
-    align-items:center;
-    gap:12px;
-    padding:0 8px;
-    position:absolute;
-    top:20px; left:12px; right:12px;
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+    position: absolute;
+    top: 20px;
+    left: 12px;
+    right: 12px;
   }
-  /* Header → right of sidebar */
-  header {
-    left:220px!important;
-    width:calc(100% - 220px)!important;
-  }
-  /* Mains → offset for sidebar */
-  main {
-    margin-left:220px!important;
-    padding-bottom:2rem!important;
-  }
+  header { left: 220px !important; width: calc(100% - 220px) !important; }
+  main   { margin-left: 220px !important; padding-bottom: 2rem !important; }
 }
 
 /* ================================================================
-   MAP — Glow frame
+   MAP — Chromatic Glass Frame
    ================================================================ */
 #map {
   box-shadow:
-    0 0 0 1px rgba(75,226,119,0.12),
-    0 0 60px rgba(75,226,119,0.07),
-    0 12px 40px rgba(0,0,0,0.55)!important;
+    0 0 0 1px rgba(0, 240, 255, 0.20),
+    0 0 0 2px rgba(75, 226, 119, 0.10),
+    0 0 50px rgba(0, 240, 255, 0.10),
+    0 12px 40px rgba(0, 0, 0, 0.55) !important;
 }
-.leaflet-tile { filter:brightness(0.85) saturate(0.9)!important; }
+.leaflet-tile {
+  filter: brightness(0.82) saturate(0.85) !important;
+}
 
 /* ================================================================
-   BUTTONS
+   BUTTONS & INPUTS
    ================================================================ */
-/* Primary CTA — green neon glow */
-button.bg-primary, a.bg-primary-container {
+/* Primary Action Button (Neon emerald pulse) */
+button.bg-primary,
+a.bg-primary-container {
   box-shadow:
-    0 4px 28px rgba(75,226,119,0.38),
-    0 0 60px rgba(75,226,119,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.22)!important;
-  transition:transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease!important;
+    inset 0 1.5px 0.5px rgba(255, 255, 255, 0.40),
+    inset 0 -1.5px 1px rgba(0, 0, 0, 0.25),
+    0 4px 24px rgba(75, 226, 119, 0.45),
+    0 0 60px rgba(75, 226, 119, 0.20) !important;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease !important;
 }
-button.bg-primary:hover, a.bg-primary-container:hover {
+button.bg-primary:hover,
+a.bg-primary-container:hover {
   box-shadow:
-    0 8px 40px rgba(75,226,119,0.55),
-    0 0 80px rgba(75,226,119,0.22),
-    inset 0 1px 0 rgba(255,255,255,0.28)!important;
-  transform:translateY(-2px) scale(1.015)!important;
+    inset 0 1.5px 0.5px rgba(255, 255, 255, 0.50),
+    0 6px 36px rgba(75, 226, 119, 0.65),
+    0 0 80px rgba(75, 226, 119, 0.30) !important;
+  transform: translateY(-2px) scale(1.015) !important;
 }
 
-/* Glass action buttons */
+/* Action Chips & Glass Buttons */
 button.bg-surface-container-high {
-  background:rgba(22,32,58,0.55)!important;
-  border:1px solid rgba(255,255,255,0.08)!important;
-  backdrop-filter:blur(14px)!important;
-  transition:all .2s ease!important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20) !important;
+  transition: all .2s cubic-bezier(.34,1.56,.64,1) !important;
 }
 button.bg-surface-container-high:hover {
-  background:rgba(32,46,82,0.72)!important;
-  border-color:rgba(255,255,255,0.14)!important;
-  box-shadow:0 6px 28px rgba(0,0,0,.45), 0 0 0 1px rgba(75,226,119,.1)!important;
-  transform:translateY(-1px)!important;
-}
-
-/* Rounded pill chips */
-.bg-surface-container-high.rounded-full {
-  background:rgba(18,26,50,0.65)!important;
-  border:1px solid rgba(255,255,255,0.07)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
-}
-
-/* ================================================================
-   INPUTS & SELECTS
-   ================================================================ */
-input:not([type=range]):not([type=checkbox]), select, textarea {
-  background:rgba(8,13,28,0.65)!important;
-  border:1px solid rgba(255,255,255,0.09)!important;
-  backdrop-filter:blur(14px)!important;
-  transition:border-color .2s, box-shadow .2s!important;
-  color:#dae2fd!important;
-}
-input:not([type=range]):focus, select:focus, textarea:focus {
-  border-color:rgba(75,226,119,0.45)!important;
-  box-shadow:0 0 0 3px rgba(75,226,119,.12), 0 0 24px rgba(75,226,119,.09)!important;
-  outline:none!important;
-}
-
-/* ================================================================
-   SPECIAL PANELS
-   ================================================================ */
-
-/* Reco card — green accent glow */
-#reco-card {
-  border:1px solid rgba(75,226,119,0.14)!important;
+  background: rgba(255, 255, 255, 0.20) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
   box-shadow:
-    0 0 0 1px rgba(75,226,119,.08),
-    0 8px 36px rgba(0,0,0,.5),
-    0 0 60px rgba(75,226,119,.06),
-    inset 0 1px 0 rgba(255,255,255,.07)!important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 1px rgba(75, 226, 119, 0.16),
+    0 6px 24px rgba(0, 0, 0, 0.45) !important;
+  transform: translateY(-1px) !important;
 }
 
-/* Savings banner — vivid green glow */
-#saved-banner {
-  border:1px solid rgba(75,226,119,.2)!important;
-  box-shadow:0 0 50px rgba(75,226,119,.12), inset 0 1px 0 rgba(75,226,119,.12)!important;
+.bg-surface-container-high.rounded-full {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Location banner */
-#location-banner {
-  background:rgba(12,20,42,0.62)!important;
-  backdrop-filter:blur(24px)!important;
-  border:1px solid rgba(180,197,255,.1)!important;
+/* Inputs & Selects */
+input:not([type=range]):not([type=checkbox]),
+select,
+textarea {
+  background: rgba(0, 0, 0, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25) !important;
+  transition: border-color .2s, box-shadow .2s !important;
+  color: #dae2fd !important;
 }
-
-/* API error */
-#api-error {
-  background:rgba(255,50,50,.07)!important;
-  border:1px solid rgba(255,70,70,.15)!important;
-  backdrop-filter:blur(16px)!important;
-}
-
-/* Toast */
-#toast-banner {
-  background:rgba(0,70,200,.2)!important;
-  border:1px solid rgba(180,197,255,.22)!important;
-  backdrop-filter:blur(20px)!important;
-  box-shadow:0 0 40px rgba(0,83,219,.18)!important;
-}
-
-/* Confirmation banner */
-#confirmation-banner {
-  border:1px solid rgba(75,226,119,.14)!important;
-  backdrop-filter:blur(24px)!important;
-  box-shadow:0 0 40px rgba(75,226,119,.07)!important;
-}
-
-/* Detail chart area */
-#detail-bars {
-  background:rgba(5,10,22,.55)!important;
-  border-radius:12px!important;
-  border:1px solid rgba(255,255,255,.05)!important;
-  backdrop-filter:blur(12px)!important;
-}
-
-/* Zone hero map preview */
-#view-zones > div > div:first-child {
-  background:rgba(6,10,22,.72)!important;
-  border:1px solid rgba(255,255,255,.07)!important;
-  box-shadow:0 8px 40px rgba(0,0,0,.55)!important;
+input:not([type=range]):focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(0, 240, 255, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 3px rgba(0, 240, 255, 0.16),
+    0 0 24px rgba(0, 240, 255, 0.15) !important;
+  outline: none !important;
 }
 
 /* ================================================================
-   PROGRESS & BADGES
+   SPECIAL PANELS & BANNERS
+   ================================================================ */
+#reco-card {
+  background: rgba(0, 240, 255, 0.10) !important;
+  border: 1px solid rgba(0, 240, 255, 0.25) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow:
+    inset 0 1.5px 0.5px rgba(255, 255, 255, 0.45),
+    inset 1.5px 0 1px rgba(0, 240, 255, 0.40),
+    inset -1.5px 0 1px rgba(217, 70, 239, 0.30),
+    inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.35),
+    0 0 45px rgba(0, 240, 255, 0.14),
+    0 12px 36px rgba(0, 0, 0, 0.50) !important;
+}
+
+#saved-banner {
+  background: rgba(75, 226, 119, 0.12) !important;
+  border: 1px solid rgba(75, 226, 119, 0.28) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    0 0 50px rgba(75, 226, 119, 0.18) !important;
+}
+
+#location-banner {
+  background: rgba(30, 80, 255, 0.12) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(180, 197, 255, 0.20) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25) !important;
+}
+
+#api-error {
+  background: rgba(244, 63, 94, 0.12) !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 150, 180, 0.20) !important;
+}
+
+#toast-banner {
+  background: rgba(37, 99, 235, 0.18) !important;
+  border: 1px solid rgba(180, 197, 255, 0.28) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.30),
+    0 0 40px rgba(37, 99, 235, 0.25) !important;
+}
+
+#confirmation-banner {
+  background: rgba(0, 240, 255, 0.10) !important;
+  border: 1px solid rgba(0, 240, 255, 0.22) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.30),
+    0 0 40px rgba(0, 240, 255, 0.12) !important;
+}
+
+#detail-bars {
+  background: rgba(0, 0, 0, 0.22) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30) !important;
+}
+
+#view-zones > div > div:first-child {
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 40px rgba(0, 0, 0, 0.55) !important;
+}
+
+/* ================================================================
+   PROGRESS & NEON ACCENTS
    ================================================================ */
 #reputation-progress-bar {
-  background:linear-gradient(90deg,rgba(75,226,119,.85),rgba(75,226,119,1))!important;
-  box-shadow:0 0 14px rgba(75,226,119,.55), 0 0 28px rgba(75,226,119,.28)!important;
+  background: linear-gradient(90deg, #00f0ff, #4be277) !important;
+  box-shadow: 0 0 14px rgba(75, 226, 119, 0.70), 0 0 32px rgba(0, 240, 255, 0.40) !important;
 }
 
-/* Colored chip bg — replace with glass variants */
 [class*="bg-primary/"] {
-  background:rgba(75,226,119,0.12)!important;
-  border:1px solid rgba(75,226,119,.2)!important;
+  background: rgba(75, 226, 119, 0.15) !important;
+  border: 1px solid rgba(75, 226, 119, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20) !important;
 }
 [class*="bg-tertiary/"] {
-  background:rgba(247,191,30,0.1)!important;
-  border:1px solid rgba(247,191,30,.18)!important;
+  background: rgba(255, 170, 0, 0.14) !important;
+  border: 1px solid rgba(255, 170, 0, 0.26) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 [class*="bg-error/"] {
-  background:rgba(255,70,70,0.09)!important;
-  border:1px solid rgba(255,100,100,.16)!important;
+  background: rgba(244, 63, 94, 0.14) !important;
+  border: 1px solid rgba(244, 63, 94, 0.26) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 150, 180, 0.18) !important;
 }
 [class*="bg-secondary-container/"] {
-  background:rgba(0,83,219,0.12)!important;
+  background: rgba(37, 99, 235, 0.14) !important;
 }
 
-/* ================================================================
-   GLOWING PULSE OVERRIDE
-   ================================================================ */
 @keyframes glow-pulse {
-  0%,100% { box-shadow:0 0 8px rgba(75,226,119,.5),  0 0 20px rgba(75,226,119,.25); }
-  50%      { box-shadow:0 0 18px rgba(75,226,119,.85), 0 0 40px rgba(75,226,119,.4); }
+  0%, 100% { box-shadow: 0 0 6px rgba(0, 240, 255, 0.60), 0 0 18px rgba(75, 226, 119, 0.30); }
+  50%      { box-shadow: 0 0 16px rgba(0, 240, 255, 0.95), 0 0 38px rgba(75, 226, 119, 0.50); }
 }
 .animate-pulse {
-  animation:glow-pulse 2s ease-in-out infinite!important;
+  animation: glow-pulse 2.2s ease-in-out infinite !important;
 }
 
-/* ================================================================
-   SECTION HEADINGS — subtle neon text
-   ================================================================ */
-.text-primary {
-  text-shadow:0 0 18px rgba(75,226,119,.45);
-}
-.text-secondary {
-  text-shadow:0 0 14px rgba(180,197,255,.35);
-}
-.text-tertiary {
-  text-shadow:0 0 14px rgba(247,191,30,.35);
-}
+.text-primary   { text-shadow: 0 0 16px rgba(75, 226, 119, 0.60); }
+.text-secondary { text-shadow: 0 0 12px rgba(180, 197, 255, 0.50); }
+.text-tertiary  { text-shadow: 0 0 12px rgba(255, 170, 0, 0.50); }
 
-/* ================================================================
-   TRANSITIONS — global easing
-   ================================================================ */
+/* Global smooth transition */
 button, a, input, select {
-  transition:all .2s cubic-bezier(.34,1.56,.64,1)!important;
+  transition: all .22s cubic-bezier(.34, 1.56, .64, 1) !important;
 }
 </style>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -448,6 +605,17 @@ button, a, input, select {
 <div aria-hidden="true" class="pk-blob pk-blob-2"></div>
 <div aria-hidden="true" class="pk-blob pk-blob-3"></div>
 <div aria-hidden="true" class="pk-blob pk-blob-4"></div>
+<div aria-hidden="true" class="pk-blob pk-blob-5"></div>
+<div aria-hidden="true" class="pk-blob pk-blob-6"></div>
+<!-- Optical glass distortion filter definition -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;">
+  <defs>
+    <filter id="glass-edge-distort" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.04" numOctaves="2" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
 <header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
 <div class="px-space-md flex flex-col justify-center gap-space-xs py-2">
 <div class="flex items-center justify-between gap-space-sm">
