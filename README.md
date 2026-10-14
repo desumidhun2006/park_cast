@@ -16,7 +16,7 @@ No per-slot sensors, cameras, or hardware. Parkistics uses **open/proxy data** (
 parkistics/
   backend/       Node + Express REST API (zones, forecasts, reports, route)
   ml-service/    Python FastAPI microservice (LightGBM/XGBoost + LSTM/GRU placeholder, rule-based v0)
-  frontend/      Web app v0 — static Leaflet prototype (maps to React/Next.js component plan)
+  frontend/      Stitch-designed mobile UI (Tailwind) on a live Leaflet/OSM map, all data from the API
   docs/          API, data model, architecture
   tests/         Playwright smoke test (all buttons / interactive elements)
 ```
@@ -32,7 +32,7 @@ cd backend && npm install && npm start
 cd ml-service && pip install -r requirements.txt && uvicorn app:app --port 8001
 # -> http://localhost:8001/health, /predict
 
-# 3. Frontend (static, works with or without backend)
+# 3. Frontend (Stitch UI, needs the backend — no mock data)
 cd frontend && npx serve . -l 5173
 # -> http://localhost:5173  (set ?api=http://localhost:4000 to force backend)
 ```
@@ -55,9 +55,9 @@ See `docs/API.md` for full contracts.
 - **v0 (this commit):** transparent rule-based forecaster encoding patterns like “mall zone full weekdays 17–19, empties after 20h” + traffic proxy correlation. Served by both `backend/src/services/forecastService.js` and `ml-service/app.py` so outputs agree.
 - **v1 roadmap:** LightGBM/XGBoost on tabular zone×time features + LSTM/GRU on occupancy sequences, trained on `parking_events` + `user_reports`, calibrated probabilities + confidence, stored in `predictions`, cached by backend.
 
-## Frontend (v0)
+## Frontend (Stitch UI, 4 views)
 
-Leaflet map with zones color-coded (green = high chance, red = low), time slider for heatmap evolution, zone detail panel (probability curve, peak hours, walk distance, price), Trip Planner (ranked zones + arrival windows + “search time saved”), one-tap Crowd Report (`Found spot` / `No spots` / `Circling > 5 min`), points/badges in `localStorage`. React/Next.js migration maps 1:1 to `app.js` sections — see `frontend/README.md`.
+Forecast home (live Leaflet map + geolocation + horizon slider + zone chips + top recommendation), Zone Details (live probability chart, pattern, navigate link, arrival alert), Trip Planner (live ranked zones, real arrival-window probabilities, walk filter, saved-time banner), Crowd Report & Badges (live POST reports, real points/ranks, live community stream). Every number comes from the API — see `frontend/README.md`.
 
 ## Pilot
 

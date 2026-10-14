@@ -7,7 +7,6 @@ coverage/
 # Env
 .env
 .env.local
-frontend/config.js
 
 # Python
 __pycache__/

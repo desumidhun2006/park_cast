@@ -1,29 +1,33 @@
-# Parkistics frontend (v2 — free map + live location)
+# Parkistics frontend (v3 — Stitch UI, fully live)
 
-Leaflet + OpenStreetMap home page that centers on the person's current location —
-**no API key, no signup, no cost**. Google Maps becomes the map provider automatically
-if a key is configured. Implements the full spec UI (forecast slider, zone detail,
-trip planner, crowd reports, gamification). Maps 1:1 to the planned React/Next.js
-components:
+Mobile-first UI generated in Stitch (Tailwind + Material Symbols + Inter),
+rebuilt as one working page: `index.html` (shell + 4 views + bottom nav) driven
+by `app.js`. **Zero mock data** — every number comes from the backend API or
+the device GPS. The backend must be running; failures show a retry banner.
 
-| v2 (`app.js` section) | React target |
+## Views
+
+| View (nav) | Content, all live |
 |---|---|
-| Leaflet/Google provider + zone markers | `<ParkingMap>` + `<ZoneMarker>` |
-| geolocation + 📍 button | `<LocateMe>` |
-| time slider | `<TimeSlider>` heatmap evolution |
-| `selectZone` detail panel | `<ZoneDetail>` probability curve, peaks, walk, price |
-| Trip Planner | `<TripPlanner>` ranked zones + arrival windows + saved time |
-| Crowd Report + `localStorage` points | `<CrowdReport>` + `<Gamification>` |
+| Forecast (map) | Leaflet + OpenStreetMap with zone pills as map markers, geolocation blue dot + 📍 recenter, horizon slider (per-zone `/forecast` refetch), zone chips, top-recommendation card from `/api/route` |
+| Zones | Detail sheet per zone: live probability chart, pattern, price/capacity/walk, confidence, Google-Maps-directions link with real coords, arrival alert (local) |
+| Planner | Origin/destination/arrival + max-walk filter, ranked zones from `/api/route`, per-window probabilities for each suggested arrival time, saved-time banner |
+| Badges | Tier/progress from confirmed-report points, one-tap `POST /reports`, live community stream from `GET /api/reports` |
 
-Run: `npx serve . -l 5173` → http://localhost:5173 (add `?api=http://localhost:4000` to force backend).
-Works offline via embedded mock when backend is down (map tiles need internet).
+## Points (real)
 
-## Optional: Google Maps upgrade
++10 pts per confirmed `POST /api/reports` (uses the server's `pointsAwarded`).
+Confirmed reports persist in `localStorage` (`ps_my_reports`); ranks
+Rookie → Reporter (10) → Contributor (50) → Scout (100).
 
-If you later have a browser key with **Maps JavaScript API** enabled, either:
+## Run
 
-- open the site with `?gmaps_key=YOUR_KEY` (saved in the browser), or
-- `cp config.example.js config.js` and paste the key (never committed).
+```bash
+cd backend && npm install && npm start   # :4000
+cd frontend && npx serve . -l 5173       # :5173, ?api= to point at backend
+```
 
-The browser will ask for location permission — allow it and the map centers on you.
-See `docs/GOOGLE_MAPS_KEY.md` for how to create a key.
+## Tests
+
+`node tests/playwright.smoke.mjs` drives every button across all 4 views
+(33 checks, incl. real map-tile load and granted/denied geolocation paths).

@@ -1,9 +1,8 @@
-# Getting a Google Maps API Key (optional upgrade for the Parkistics live map)
+# Getting a Google Maps API Key (reference only — not used by the current UI)
 
-> **Note:** Parkistics now uses a free OpenStreetMap map by default — no key needed.
-> This guide is only for switching the map provider to Google Maps later.
-> Google requires a billing account (card), though the $200/month free credit covers
-> local development and small pilots.
+> **Note:** The current Stitch UI uses a free OpenStreetMap map and needs no key.
+> The Google Maps provider was removed with the Stitch integration. This guide is
+> retained for reference if a Google Maps option is re-added later.
 
 Takes ~5 minutes. You need a Google account. Google requires billing to be enabled,
 but the Maps JavaScript API includes a recurring **$200/month free credit**, which

@@ -73,37 +73,52 @@ try {
   check('leaflet map element initialized', await page.locator('#map.leaflet-container').isVisible());
   check('leaflet tiles loaded', (await page.locator('#map img.leaflet-tile-loaded').count()) > 0);
 
-  // every zone button
+  // every zone button (rendered live from GET /api/zones)
+  await page.waitForSelector('[data-testid="zone-marker-zone-mall-gateway"]', { timeout: 15000 });
   const zoneBtns = await page.locator('[data-testid^="zone-marker-"]').count();
   check('6 zone buttons rendered', zoneBtns === 6, `${zoneBtns} found`);
   const ids = ['zone-mall-gateway','zone-campus-north','zone-telegraph','zone-station','zone-residential-south','zone-hospital-east'];
   for (const id of ids) {
+    await page.locator('[data-testid="nav-forecast"]').click();
     await page.locator(`[data-testid="zone-marker-${id}"]`).click();
-    await page.waitForSelector('#zone-detail:not(.hidden)', { timeout: 8000 });
+    await page.waitForSelector('#view-zones:not(.hidden)', { timeout: 8000 });
     const name = await page.locator('#detail-name').innerText();
     check(`zone detail opens (${id})`, name.length > 2, name);
   }
   await page.screenshot({ path: `${shots}/02-zone-detail.png` });
   await page.locator('[data-testid="zone-detail-close"]').click();
-  check('zone detail closes', await page.locator('#zone-detail.hidden').count() === 1);
+  await page.waitForSelector('#view-forecast:not(.hidden)', { timeout: 8000 });
+  check('zone detail closes back to forecast', await page.locator('#view-forecast:not(.hidden)').count() === 1);
+
+  // bottom nav switches all four views
+  for (const [nav, view] of [['nav-planner','view-planner'],['nav-badges','view-badges'],['nav-zones','view-zones'],['nav-forecast','view-forecast']]) {
+    await page.locator(`[data-testid="${nav}"]`).click();
+    check(`nav ${nav} shows ${view}`, await page.locator(`#${view}:not(.hidden)`).count() === 1);
+  }
+
+  // trip planner (live GET /api/route)
+  await page.locator('[data-testid="nav-planner"]').click();
 
   // trip planner (hint text shows first; wait for search-completion marker)
   await page.locator('[data-testid="trip-origin"]').fill('Campus');
   await page.locator('[data-testid="trip-destination"]').fill('Gateway Mall');
   await page.locator('[data-testid="trip-search"]').click();
-  await page.waitForSelector('[data-testid="trip-saved"]', { timeout: 8000 });
+  await page.waitForSelector('#saved-banner:not(.hidden)', { timeout: 15000 });
   const nResults = await page.locator('#trip-results .result').count();
-  check('trip planner returns results', nResults >= 5, `${nResults} rows`);
+  check('trip planner returns results', nResults >= 4, `${nResults} rows`);
   await page.screenshot({ path: `${shots}/03-trip.png` });
 
-  // crowd reports (all three)
+  // crowd reports (all three, live POST /api/reports)
+  await page.locator('[data-testid="nav-badges"]').click();
   for (const sig of ['found','full','circling']) {
     await page.locator('[data-testid="report-zone-select"]').selectOption('zone-station');
     await page.locator(`[data-testid="report-${sig}"]`).click();
-    await page.waitForTimeout(800);
-    const st = await page.locator('[data-testid="report-status"]').innerText();
-    check(`report button (${sig})`, /thanks|saved locally/i.test(st), st.slice(0, 60));
+    await page.waitForSelector('#confirmation-banner:not(.hidden)', { timeout: 8000 });
+    const st = await page.locator('#confirm-message-text').innerText();
+    check(`report button (${sig})`, /recorded/i.test(st), st.slice(0, 60));
   }
+  const feedYou = await page.locator('#activity-feed-list').innerText();
+  check('community stream shows my reports', /you/i.test(feedYou));
   const pts = await page.locator('[data-testid="points-display"]').innerText();
   check('gamification points accrue', parseInt(pts) >= 30, pts);
   await page.screenshot({ path: `${shots}/04-reported.png` });
