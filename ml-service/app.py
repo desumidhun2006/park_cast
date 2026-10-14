@@ -1,4 +1,4 @@
-"""ParkCast ML microservice (v0 rule-based placeholder for LightGBM/XGBoost + LSTM/GRU).
+"""Parkistics ML microservice (v0 rule-based placeholder for LightGBM/XGBoost + LSTM/GRU).
 
 Mirrors backend/src/services/forecastService.js so /predict agrees with local fallback.
 v1 roadmap: train on parking_events + user_reports, output calibrated probability + confidence.
@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
 
-app = FastAPI(title="ParkCast ML service", version="0.1.0")
+app = FastAPI(title="Parkistics ML service", version="0.1.0")
 
 ZONE_PEAKS = {
     "zone-mall-gateway": "Weekdays 17-19 full, empties after 20",
@@ -73,7 +73,7 @@ def base_probability(zone_id: str, dt: datetime) -> float:
 
 @app.get("/health")
 def health():
-    return {"ok": True, "service": "parkcast-ml", "at": datetime.utcnow().isoformat()}
+    return {"ok": True, "service": "parkistics-ml", "at": datetime.utcnow().isoformat()}
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest):

@@ -1,6 +1,6 @@
-# ParkCast – Predictive, Community-Driven Parking Availability Platform
+# Parkistics – Predictive, Community-Driven Parking Availability Platform
 
-ParkCast is a **software-only, MERN-stack smart parking platform** that predicts **where and when free spots are likely available**, instead of just showing current occupancy from hardware sensors.
+Parkistics is a **software-only, MERN-stack smart parking platform** that predicts **where and when free spots are likely available**, instead of just showing current occupancy from hardware sensors.
 
 > Parking as a spatio-temporal forecasting problem: for every zone (street block, lot, cluster) estimate **probability of finding a free spot** + **confidence** for multiple future windows (15/30/60 min).
 
@@ -8,12 +8,12 @@ Drivers use an interactive map + trip planner to choose **which area** and **whe
 
 ## Why not sensors?
 
-No per-slot sensors, cameras, or hardware. ParkCast uses **open/proxy data** (city open-data, OSM geometries, POIs, traffic indices, weather/transit optionally) + **sparse crowdsourced signals** (`found spot` / `no luck` / `circling > 5 min`) to infer availability. Immediately deployable in any city with basic open data.
+No per-slot sensors, cameras, or hardware. Parkistics uses **open/proxy data** (city open-data, OSM geometries, POIs, traffic indices, weather/transit optionally) + **sparse crowdsourced signals** (`found spot` / `no luck` / `circling > 5 min`) to infer availability. Immediately deployable in any city with basic open data.
 
 ## Monorepo layout
 
 ```
-park_cast/
+parkistics/
   backend/       Node + Express REST API (zones, forecasts, reports, route)
   ml-service/    Python FastAPI microservice (LightGBM/XGBoost + LSTM/GRU placeholder, rule-based v0)
   frontend/      Web app v0 — static Leaflet prototype (maps to React/Next.js component plan)

@@ -1,4 +1,4 @@
-// ParkCast Playwright smoke test — operates EVERY interactive element.
+// Parkistics Playwright smoke test — operates EVERY interactive element.
 // Run: npm --prefix backend install; node tests/playwright.smoke.mjs
 // Serves backend :4000 + frontend :5173, drives Chromium headless, screenshots to frontend-screenshots/.
 import { spawn } from 'node:child_process';
@@ -110,8 +110,8 @@ try {
   geoPage.on('pageerror', e => errors.push('geo: ' + String(e)));
   await geoPage.goto(`http://localhost:${FRONT_PORT}/?api=http://localhost:${BACKEND_PORT}`, { waitUntil: 'networkidle' });
   await geoPage.locator('[data-testid="locate-me"]').click();
-  await geoPage.waitForFunction(() => window.__parkcast && window.__parkcast.state.userLocation !== null, { timeout: 8000 });
-  const ulo = await geoPage.evaluate(() => window.__parkcast.state.userLocation);
+  await geoPage.waitForFunction(() => window.__parkistics && window.__parkistics.state.userLocation !== null, { timeout: 8000 });
+  const ulo = await geoPage.evaluate(() => window.__parkistics.state.userLocation);
   check('geolocation centers on user', Math.abs(ulo.lat - 37.7749) < 0.001 && Math.abs(ulo.lng + 122.4194) < 0.001, `${ulo.lat},${ulo.lng}`);
   const uloText = await geoPage.locator('[data-testid="location-status"]').innerText();
   check('location status shows you-are-here', /you are here/i.test(uloText), uloText.slice(0, 70));

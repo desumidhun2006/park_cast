@@ -1,4 +1,4 @@
-# ParkCast data model (MongoDB)
+# Parkistics data model (MongoDB)
 
 ## `zones`
 Geo + metadata per parking zone (street block / lot / cluster).

@@ -1,4 +1,4 @@
-// ParkCast frontend v1 — Google Maps home page + live user location.
+// Parkistics frontend v1 — Google Maps home page + live user location.
 // Tries backend API, falls back to embedded mock so it works offline / in tests.
 // Map layer: Google Maps JavaScript API (key via ?gmaps_key=, localStorage, or config.js).
 // Location layer: navigator.geolocation centers the map where the person is right now.
@@ -47,7 +47,7 @@
   function statusOf(p) { return p >= 0.6 ? 'high' : p >= 0.35 ? 'medium' : 'low'; }
   function colorOf(s) { return s === 'high' ? '#22c55e' : s === 'medium' ? '#eab308' : '#ef4444'; }
 
-  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('pc_points') || '0', 10), userLocation: null, mapReady: false, keySource: null };
+  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('ps_points') || '0', 10), userLocation: null, mapReady: false, keySource: null };
 
   const $ = (id) => document.getElementById(id);
 
@@ -56,16 +56,16 @@
     const urlKey = params.get('gmaps_key');
     if (urlKey !== null) {
       if (urlKey && !PLACEHOLDER_KEYS.has(urlKey)) {
-        try { localStorage.setItem('pc_gmaps_key', urlKey); } catch {}
+        try { localStorage.setItem('ps_gmaps_key', urlKey); } catch {}
         state.keySource = 'url';
         return urlKey;
       }
-      try { localStorage.removeItem('pc_gmaps_key'); } catch {}
+      try { localStorage.removeItem('ps_gmaps_key'); } catch {}
       state.keySource = null;
       return null;
     }
     try {
-      const stored = localStorage.getItem('pc_gmaps_key');
+      const stored = localStorage.getItem('ps_gmaps_key');
       if (stored && !PLACEHOLDER_KEYS.has(stored)) { state.keySource = 'stored'; return stored; }
     } catch {}
     const cfg = (window.PARKCAST_CONFIG && window.PARKCAST_CONFIG.GOOGLE_MAPS_API_KEY) || '';
@@ -316,7 +316,7 @@
       else throw new Error();
     } catch { $('report-status').textContent = `Saved locally (backend offline): ${signal} @ ${zoneId} (+10 pts).`; }
     state.points += 10;
-    localStorage.setItem('pc_points', String(state.points));
+    localStorage.setItem('ps_points', String(state.points));
     renderPoints();
     fetchZones();
   }
@@ -325,7 +325,7 @@
   $('report-circling').addEventListener('click', () => report('circling'));
 
   // expose for Playwright
-  window.__parkcast = { state, selectZone, report, fetchZones, locateMe };
+  window.__parkistics = { state, selectZone, report, fetchZones, locateMe };
 
   // Default arrival = now + 60 min (rounded to 5 min) so Trip Planner works in one click.
   try {

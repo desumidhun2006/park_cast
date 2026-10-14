@@ -1,4 +1,4 @@
-# ParkCast ML service
+# Parkistics ML service
 
 Python FastAPI microservice. v0 is a transparent rule-based forecaster mirroring `backend/src/services/forecastService.js`.
 

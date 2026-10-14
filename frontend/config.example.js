@@ -1,4 +1,4 @@
-// ParkCast local config — NOT committed (see .gitignore).
+// Parkistics local config — NOT committed (see .gitignore).
 // 1. Copy this file to config.js:  cp config.example.js config.js
 // 2. Paste your Google Maps browser API key below
 //    (Google Cloud Console → enable "Maps JavaScript API" → Credentials → API key,

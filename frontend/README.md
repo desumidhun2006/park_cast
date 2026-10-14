@@ -1,4 +1,4 @@
-# ParkCast frontend (v1 — Google Maps + live location)
+# Parkistics frontend (v1 — Google Maps + live location)
 
 Google Maps home page that centers on the person's current location, plus the full
 spec UI (forecast slider, zone detail, trip planner, crowd reports, gamification).

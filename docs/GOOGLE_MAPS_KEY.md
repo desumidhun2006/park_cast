@@ -1,4 +1,4 @@
-# Getting a Google Maps API Key (for the ParkCast live map)
+# Getting a Google Maps API Key (for the Parkistics live map)
 
 Takes ~5 minutes. You need a Google account. Google requires billing to be enabled,
 but the Maps JavaScript API includes a recurring **$200/month free credit**, which
@@ -12,13 +12,13 @@ Go to https://console.cloud.google.com/ and sign in.
 ## Step 2 — Create (or select) a project
 
 1. Click the project dropdown at the top → **New Project**.
-2. Name it e.g. `parkcast` → **Create**. Wait for it to finish, then select it.
+2. Name it e.g. `parkistics` → **Create**. Wait for it to finish, then select it.
 
 ## Step 3 — Enable billing
 
 1. Open the ☰ menu → **Billing**.
 2. **Link a billing account** (create one if needed — card required, free credit applies).
-3. Make sure your `parkcast` project is linked to it.
+3. Make sure your `parkistics` project is linked to it.
 
 ## Step 4 — Enable the Maps JavaScript API
 
@@ -41,7 +41,7 @@ On the key's page:
 - **API restrictions → Restrict key → select only "Maps JavaScript API"**.
 - **Save.**
 
-## Step 7 — Use it in ParkCast (pick one)
+## Step 7 — Use it in Parkistics (pick one)
 
 - **Easiest:** open the site once with the key in the URL
   (it's saved in the browser for future visits):

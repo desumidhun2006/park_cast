@@ -1,4 +1,4 @@
-# ParkCast API (v0)
+# Parkistics API (v0)
 
 Base: `http://localhost:4000`
 

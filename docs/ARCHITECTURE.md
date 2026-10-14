@@ -1,4 +1,4 @@
-# ParkCast architecture (v0)
+# Parkistics architecture (v0)
 
 ```
 [open data: city portals, OSM, POIs, traffic/weather (optional)]

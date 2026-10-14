@@ -1,7 +1,7 @@
 {
-  "name": "parkcast-backend",
+  "name": "parkistics-backend",
   "version": "0.1.0",
-  "description": "ParkCast Node + Express backend — zones, forecasts, reports, route recommendations",
+  "description": "Parkistics Node + Express backend — zones, forecasts, reports, route recommendations",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

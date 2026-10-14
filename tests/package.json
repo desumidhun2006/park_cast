@@ -1,7 +1,7 @@
 {
-  "name": "parkcast-smoke-tests",
+  "name": "parkistics-smoke-tests",
   "version": "0.1.0",
-  "description": "ParkCast Playwright smoke test — operates every button / interactive element",
+  "description": "Parkistics Playwright smoke test — operates every button / interactive element",
   "scripts": {
     "smoke": "node playwright.smoke.mjs"
   },
