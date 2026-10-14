@@ -1,12 +1,14 @@
-# Parkistics frontend (v1 — Google Maps + live location)
+# Parkistics frontend (v2 — free map + live location)
 
-Google Maps home page that centers on the person's current location, plus the full
-spec UI (forecast slider, zone detail, trip planner, crowd reports, gamification).
-Maps 1:1 to the planned React/Next.js components:
+Leaflet + OpenStreetMap home page that centers on the person's current location —
+**no API key, no signup, no cost**. Google Maps becomes the map provider automatically
+if a key is configured. Implements the full spec UI (forecast slider, zone detail,
+trip planner, crowd reports, gamification). Maps 1:1 to the planned React/Next.js
+components:
 
-| v1 (`app.js` section) | React target |
+| v2 (`app.js` section) | React target |
 |---|---|
-| Google Maps + zone circles | `<ParkingMap>` + `<ZoneMarker>` |
+| Leaflet/Google provider + zone markers | `<ParkingMap>` + `<ZoneMarker>` |
 | geolocation + 📍 button | `<LocateMe>` |
 | time slider | `<TimeSlider>` heatmap evolution |
 | `selectZone` detail panel | `<ZoneDetail>` probability curve, peaks, walk, price |
@@ -14,21 +16,14 @@ Maps 1:1 to the planned React/Next.js components:
 | Crowd Report + `localStorage` points | `<CrowdReport>` + `<Gamification>` |
 
 Run: `npx serve . -l 5173` → http://localhost:5173 (add `?api=http://localhost:4000` to force backend).
-Works offline via embedded mock when backend is down.
+Works offline via embedded mock when backend is down (map tiles need internet).
 
-## Google Maps API key (required for the live map)
+## Optional: Google Maps upgrade
 
-The map needs a **browser** API key with **Maps JavaScript API** enabled:
+If you later have a browser key with **Maps JavaScript API** enabled, either:
 
-1. https://console.cloud.google.com → new/existing project → enable billing
-2. APIs & Services → enable **Maps JavaScript API**
-3. Credentials → Create Credentials → API key (restrict to your site + localhost)
+- open the site with `?gmaps_key=YOUR_KEY` (saved in the browser), or
+- `cp config.example.js config.js` and paste the key (never committed).
 
-Then either (pick one):
-
-- **Easiest:** open the site with the key in the URL (saved to the browser for next time):
-  `http://localhost:5173/?gmaps_key=YOUR_KEY`
-- **File:** `cp config.example.js config.js` and paste the key (never committed).
-
-Without a key the map area shows setup instructions; everything else still works.
 The browser will ask for location permission — allow it and the map centers on you.
+See `docs/GOOGLE_MAPS_KEY.md` for how to create a key.

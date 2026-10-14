@@ -1,13 +1,18 @@
-// Parkistics frontend v1 — Google Maps home page + live user location.
+// Parkistics frontend v2 — free OpenStreetMap home page + live user location.
+// Google Maps is an optional upgrade when an API key is configured.
 // Tries backend API, falls back to embedded mock so it works offline / in tests.
-// Map layer: Google Maps JavaScript API (key via ?gmaps_key=, localStorage, or config.js).
+// Map layer: Leaflet + OSM tiles by default (no key, no signup);
+//   Google Maps JavaScript API when a key is present (via ?gmaps_key=, localStorage, or config.js).
 // Location layer: navigator.geolocation centers the map where the person is right now.
 (function () {
   const params = new URLSearchParams(location.search);
   const API_BASE = params.get('api') || 'http://localhost:4000';
 
   const DEFAULT_CENTER = { lat: 37.8715, lng: -122.273 };
+  const DEFAULT_ZOOM = 14;
   const PLACEHOLDER_KEYS = new Set(['', 'PASTE_YOUR_KEY_HERE', 'YOUR_API_KEY']);
+  const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 
   const LOCAL_ZONES = [
     { id: 'zone-mall-gateway', name: 'Gateway Mall Lot', center: { lat: 37.8725, lng: -122.2715 }, capacity: 220, pricePerHour: 2.5, walkTo: [{ label: 'Gateway Mall', minutes: 3 }], peakHours: 'Weekdays 17-19 full, empties after 20', poiTags: ['mall'] },
@@ -47,9 +52,24 @@
   function statusOf(p) { return p >= 0.6 ? 'high' : p >= 0.35 ? 'medium' : 'low'; }
   function colorOf(s) { return s === 'high' ? '#22c55e' : s === 'medium' ? '#eab308' : '#ef4444'; }
 
-  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('ps_points') || '0', 10), userLocation: null, mapReady: false, keySource: null };
+  const state = { zones: LOCAL_ZONES, horizonMin: 15, selectedId: null, apiOk: false, points: parseInt(localStorage.getItem('ps_points') || '0', 10), userLocation: null, mapReady: false, provider: null, keySource: null };
 
   const $ = (id) => document.getElementById(id);
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true; s.defer = true;
+      s.onload = resolve; s.onerror = () => reject(new Error('script load failed: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  function loadCss(href) {
+    if (document.querySelector(`link[href="${href}"]`)) return;
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href;
+    document.head.appendChild(l);
+  }
 
   // ---- Google Maps key resolution: ?gmaps_key= > localStorage > config.js ----
   function resolveApiKey() {
@@ -79,55 +99,49 @@
     el.innerHTML = `<div class="map-notice" data-testid="map-notice">${html}</div>`;
   }
 
-  function keySetupHtml(reason) {
-    return `${reason}<br><br>To enable the live Google map, add your browser API key ` +
-      `(Google Cloud Console → enable <b>Maps JavaScript API</b> → Credentials → API key), then either:<br>` +
-      `1. Open the site with <code>?gmaps_key=YOUR_KEY</code>, or<br>` +
-      `2. Copy <code>frontend/config.example.js</code> to <code>config.js</code> and paste the key there.<br><br>` +
-      `Zone list, forecasts, trip planner and reports below all work without a key.`;
-  }
-
-  // ---- Google Maps ----
+  // ---- Map providers: Leaflet/OSM (free default) + Google (optional upgrade) ----
   let map = null;
-  let circles = {};
+  let circles = {};        // google.maps.Circle per zone
+  let leafletMarkers = {}; // L.circleMarker per zone
   let youMarker = null;
   let accuracyCircle = null;
 
-  window.__pcInitMap = function () {
+  function zoneStatus(z) {
+    const p = probAt(z, state.horizonMin);
+    const s = z.current && state.horizonMin === 15 && z.current.status ? z.current.status : statusOf(p);
+    return { p, s, color: colorOf(s) };
+  }
+
+  // Google
+  window.__psInitMap = function () {
     try {
-      map = new google.maps.Map($('map'), { center: state.userLocation || DEFAULT_CENTER, zoom: 14, mapTypeControl: false, streetViewControl: false });
+      map = new google.maps.Map($('map'), { center: state.userLocation || DEFAULT_CENTER, zoom: DEFAULT_ZOOM, mapTypeControl: false, streetViewControl: false });
+      state.provider = 'google';
       state.mapReady = true;
       if (state.userLocation) placeYouMarker(state.userLocation);
       renderZones();
     } catch (e) {
-      showMapNotice(keySetupHtml('Google Maps failed to initialize.'));
+      initLeaflet(); // fall back to the free map
     }
   };
 
   window.gm_authFailure = function () {
-    state.mapReady = false;
-    showMapNotice(keySetupHtml('Google Maps rejected the API key (auth failure) — check the key and its restrictions.'));
+    // Invalid/restricted key — fall back to the free map instead of a dead page.
+    if (!state.provider) initLeaflet();
   };
 
-  function loadGoogleMaps(key) {
-    const s = document.createElement('script');
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__pcInitMap&loading=async`;
-    s.async = true;
-    s.defer = true;
-    s.onerror = () => showMapNotice(keySetupHtml("Couldn't load the Google Maps script (network or key issue)."));
-    document.head.appendChild(s);
+  function initGoogle(key) {
+    window.__psInitMapRef = window.__psInitMap;
+    loadScript(`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=__psInitMap&loading=async`)
+      .catch(() => { if (!state.provider) initLeaflet(); });
   }
 
-  function syncCircles() {
-    if (!state.mapReady) return;
-    // remove circles for zones that no longer exist
+  function syncGoogleCircles() {
     Object.keys(circles).forEach(id => {
       if (!state.zones.find(z => z.id === id)) { circles[id].setMap(null); delete circles[id]; }
     });
     state.zones.forEach(z => {
-      const p = probAt(z, state.horizonMin);
-      const s = z.current && state.horizonMin === 15 && z.current.status ? z.current.status : statusOf(p);
-      const color = colorOf(s);
+      const { color } = zoneStatus(z);
       if (!circles[z.id]) {
         const c = new google.maps.Circle({
           map, center: { lat: z.center.lat, lng: z.center.lng }, radius: 120,
@@ -141,23 +155,88 @@
     });
   }
 
+  // Leaflet / OpenStreetMap (free, no key)
+  async function initLeaflet() {
+    if (state.provider) return;
+    try {
+      if (!window.L) {
+        loadCss(LEAFLET_CSS);
+        await loadScript(LEAFLET_JS);
+      }
+      map = L.map('map').setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], DEFAULT_ZOOM);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+      state.provider = 'leaflet';
+      state.mapReady = true;
+      if (state.userLocation) placeYouMarker(state.userLocation);
+      renderZones();
+    } catch (e) {
+      showMapNotice('Map tiles could not load (you may be offline). Zone list, forecasts, trip planner and reports below still work.');
+    }
+  }
+
+  function syncLeafletMarkers() {
+    Object.keys(leafletMarkers).forEach(id => {
+      if (!state.zones.find(z => z.id === id)) { leafletMarkers[id].remove(); delete leafletMarkers[id]; }
+    });
+    state.zones.forEach(z => {
+      const { p, color } = zoneStatus(z);
+      if (!leafletMarkers[z.id]) {
+        const m = L.circleMarker([z.center.lat, z.center.lng], { radius: 14, color, fillColor: color, fillOpacity: 0.7 }).addTo(map);
+        m.bindTooltip(`${z.name} — ${Math.round(p * 100)}%`);
+        m.on('click', () => selectZone(z.id));
+        leafletMarkers[z.id] = m;
+      } else {
+        leafletMarkers[z.id].setStyle({ color, fillColor: color });
+        leafletMarkers[z.id].setTooltipContent(`${z.name} — ${Math.round(p * 100)}%`);
+      }
+    });
+  }
+
+  function syncMarkers() {
+    if (!state.mapReady) return;
+    if (state.provider === 'google') syncGoogleCircles();
+    else if (state.provider === 'leaflet') syncLeafletMarkers();
+  }
+
+  function centerMap(lat, lng, zoom) {
+    if (!state.mapReady || !map) return;
+    try {
+      if (state.provider === 'google') { map.panTo({ lat, lng }); map.setZoom(zoom); }
+      else if (state.provider === 'leaflet') { map.setView([lat, lng], zoom); }
+    } catch {}
+  }
+
   // ---- Live user location ----
   function fmt(n) { return Math.round(n * 10000) / 10000; }
 
   function placeYouMarker(loc) {
     if (!state.mapReady) return;
-    const pos = { lat: loc.lat, lng: loc.lng };
-    if (!youMarker) {
-      youMarker = new google.maps.Marker({
-        map, position: pos, title: 'You are here',
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#2563eb', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 }
-      });
-    } else youMarker.setPosition(pos);
-    if (loc.accuracy && isFinite(loc.accuracy)) {
-      if (!accuracyCircle) accuracyCircle = new google.maps.Circle({ map, fillColor: '#2563eb', fillOpacity: 0.15, strokeColor: '#2563eb', strokeOpacity: 0.4 });
-      accuracyCircle.setCenter(pos);
-      accuracyCircle.setRadius(Math.min(loc.accuracy, 2000));
-    }
+    try {
+      if (state.provider === 'google') {
+        const pos = { lat: loc.lat, lng: loc.lng };
+        if (!youMarker) {
+          youMarker = new google.maps.Marker({
+            map, position: pos, title: 'You are here',
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#2563eb', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 }
+          });
+        } else youMarker.setPosition(pos);
+        if (loc.accuracy && isFinite(loc.accuracy)) {
+          if (!accuracyCircle) accuracyCircle = new google.maps.Circle({ map, fillColor: '#2563eb', fillOpacity: 0.15, strokeColor: '#2563eb', strokeOpacity: 0.4 });
+          accuracyCircle.setCenter(pos);
+          accuracyCircle.setRadius(Math.min(loc.accuracy, 2000));
+        }
+      } else if (state.provider === 'leaflet') {
+        if (!youMarker) {
+          youMarker = L.circleMarker([loc.lat, loc.lng], { radius: 9, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map);
+          youMarker.bindTooltip('You are here');
+        } else youMarker.setLatLng([loc.lat, loc.lng]);
+        if (loc.accuracy && isFinite(loc.accuracy)) {
+          if (!accuracyCircle) accuracyCircle = L.circle([loc.lat, loc.lng], { color: '#2563eb', weight: 1, opacity: 0.4, fillColor: '#2563eb', fillOpacity: 0.15 }).addTo(map);
+          accuracyCircle.setLatLng([loc.lat, loc.lng]);
+          accuracyCircle.setRadius(Math.min(loc.accuracy, 2000));
+        }
+      }
+    } catch {}
   }
 
   function locateMe() {
@@ -172,11 +251,8 @@
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
         state.userLocation = loc;
         statusEl.textContent = `You are here ✓ (${fmt(loc.lat)}, ${fmt(loc.lng)})`;
-        if (state.mapReady && map) {
-          map.panTo({ lat: loc.lat, lng: loc.lng });
-          map.setZoom(15);
-          placeYouMarker(loc);
-        }
+        centerMap(loc.lat, loc.lng, 15);
+        placeYouMarker(loc);
       },
       (err) => {
         const why = err && err.code === 1 ? 'permission denied' : 'unavailable';
@@ -221,7 +297,7 @@
       sel.appendChild(o);
     });
     $('time-label').textContent = `+${state.horizonMin} min`;
-    syncCircles();
+    syncMarkers();
   }
 
   async function fetchZones() {
@@ -268,7 +344,7 @@
       bars.appendChild(d);
     });
     $('detail-extra').textContent = `Confidence ${(series[1] && series[1].confidence) || '—'} • Probability of finding a spot over next hours.`;
-    if (state.mapReady && map) { try { map.panTo({ lat: z.center.lat, lng: z.center.lng }); map.setZoom(15); } catch {} }
+    centerMap(z.center.lat, z.center.lng, 15);
   }
 
   $('zone-detail-close').addEventListener('click', () => $('zone-detail').classList.add('hidden'));
@@ -339,10 +415,10 @@
   renderZones();
   fetchZones();
 
-  // Map boot: Google Maps when a key is present, setup notice otherwise.
+  // Map boot: free Leaflet/OSM by default; Google Maps when a key is configured.
   const gkey = resolveApiKey();
-  if (gkey) loadGoogleMaps(gkey);
-  else showMapNotice(keySetupHtml('Live Google map needs an API key.'));
+  if (gkey) initGoogle(gkey);
+  else initLeaflet();
 
   // Ask for the person's location right away (map centers on it once granted).
   locateMe();

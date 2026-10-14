@@ -1,4 +1,9 @@
-# Getting a Google Maps API Key (for the Parkistics live map)
+# Getting a Google Maps API Key (optional upgrade for the Parkistics live map)
+
+> **Note:** Parkistics now uses a free OpenStreetMap map by default — no key needed.
+> This guide is only for switching the map provider to Google Maps later.
+> Google requires a billing account (card), though the $200/month free credit covers
+> local development and small pilots.
 
 Takes ~5 minutes. You need a Google account. Google requires billing to be enabled,
 but the Maps JavaScript API includes a recurring **$200/month free credit**, which

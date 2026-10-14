@@ -67,7 +67,11 @@ try {
   check('locate-me button visible', await page.locator('[data-testid="locate-me"]').isVisible());
   const locText = await page.locator('[data-testid="location-status"]').innerText();
   check('location status shown', locText.length > 3, locText.slice(0, 70));
-  check('map shows key setup notice (no key in test env)', await page.locator('[data-testid="map-notice"]').isVisible());
+  await page.waitForFunction(() => window.__parkistics && window.__parkistics.state.mapReady, { timeout: 20000 });
+  const provider = await page.evaluate(() => window.__parkistics.state.provider);
+  check('free leaflet map renders without key', provider === 'leaflet', provider);
+  check('leaflet map element initialized', await page.locator('#map.leaflet-container').isVisible());
+  check('leaflet tiles loaded', (await page.locator('#map img.leaflet-tile-loaded').count()) > 0);
 
   // every zone button
   const zoneBtns = await page.locator('[data-testid^="zone-marker-"]').count();
