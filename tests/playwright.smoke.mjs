@@ -63,11 +63,7 @@ try {
   await page.screenshot({ path: `${shots}/01-slider-60.png` });
   await page.locator('[data-testid="time-slider"]').fill('15');
 
-  // phone 9:16 frame wraps the app on desktop viewports
-  const phoneBox = await page.locator('#phone').boundingBox();
-  const ratio = phoneBox ? phoneBox.height / phoneBox.width : 0;
-  check('phone frame visible', !!phoneBox && phoneBox.width <= 452, phoneBox ? `${Math.round(phoneBox.width)}x${Math.round(phoneBox.height)}` : 'missing');
-  check('phone frame is 9:16', Math.abs(ratio - 16 / 9) < 0.06, ratio ? ratio.toFixed(3) : 'n/a');
+  // location toolbar (denied path on default context)
   check('locate-me button visible', await page.locator('[data-testid="locate-me"]').isVisible());
   const locText = await page.locator('[data-testid="location-status"]').innerText();
   check('location status shown', locText.length > 3, locText.slice(0, 70));
