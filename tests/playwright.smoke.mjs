@@ -63,7 +63,11 @@ try {
   await page.screenshot({ path: `${shots}/01-slider-60.png` });
   await page.locator('[data-testid="time-slider"]').fill('15');
 
-  // google map toolbar + location status
+  // phone 9:16 frame wraps the app on desktop viewports
+  const phoneBox = await page.locator('#phone').boundingBox();
+  const ratio = phoneBox ? phoneBox.height / phoneBox.width : 0;
+  check('phone frame visible', !!phoneBox && phoneBox.width <= 452, phoneBox ? `${Math.round(phoneBox.width)}x${Math.round(phoneBox.height)}` : 'missing');
+  check('phone frame is 9:16', Math.abs(ratio - 16 / 9) < 0.06, ratio ? ratio.toFixed(3) : 'n/a');
   check('locate-me button visible', await page.locator('[data-testid="locate-me"]').isVisible());
   const locText = await page.locator('[data-testid="location-status"]').innerText();
   check('location status shown', locText.length > 3, locText.slice(0, 70));
@@ -112,8 +116,9 @@ try {
   await page.locator('[data-testid="nav-badges"]').click();
   for (const sig of ['found','full','circling']) {
     await page.locator('[data-testid="report-zone-select"]').selectOption('zone-station');
+    const before = await page.locator('[data-testid="points-display"]').innerText();
     await page.locator(`[data-testid="report-${sig}"]`).click();
-    await page.waitForSelector('#confirmation-banner:not(.hidden)', { timeout: 8000 });
+    await page.waitForFunction((b) => document.getElementById('points-display').innerText !== b, before, { timeout: 8000 });
     const st = await page.locator('#confirm-message-text').innerText();
     check(`report button (${sig})`, /recorded/i.test(st), st.slice(0, 60));
   }
