@@ -66,6 +66,10 @@ try {
   const isForecastVisible = await page.locator('#view-forecast:not(.hidden)').isVisible();
   check('forecast page is the active primary view', isForecastVisible);
 
+  // points and badges display removed
+  check('points display removed from header', await page.locator('#points-display').count() === 0);
+  check('badges display removed from header', await page.locator('#badges-display').count() === 0);
+
   // time slider
   await page.locator('[data-testid="time-slider"]').fill('60');
   await page.waitForTimeout(600);
