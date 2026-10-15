@@ -71,7 +71,7 @@ try {
   await page.waitForTimeout(600);
   const label60 = await page.locator('[data-testid="time-label"]').innerText();
   check('time slider updates label', label60.includes('60'), label60);
-  await page.screenshot({ path: `${shots}/01-slider-60-light.png` });
+  await page.screenshot({ path: `${shots}/01-slider-60-light.png`, fullPage: true });
   await page.locator('[data-testid="time-slider"]').fill('15');
 
   // slider quick-step buttons
@@ -100,10 +100,12 @@ try {
     await page.waitForSelector('#view-zones:not(.hidden)', { timeout: 8000 });
     const name = await page.locator('#detail-name').innerText();
     check(`zone detail opens (${id})`, name.length > 2, name);
+    if (id === ids[0]) {
+      await page.screenshot({ path: `${shots}/02-zone-detail-light.png`, fullPage: true });
+    }
     await page.locator('[data-testid="zone-detail-close"]').click();
     await page.waitForSelector('#view-forecast:not(.hidden)', { timeout: 8000 });
   }
-  await page.screenshot({ path: `${shots}/02-zone-detail-light.png` });
   check('zone detail closes back to forecast', await page.locator('#view-forecast:not(.hidden)').count() === 1);
 
   // recommendation card
@@ -121,7 +123,7 @@ try {
   check('geolocation centers on user', Math.abs(ulo.lat - 37.7749) < 0.001 && Math.abs(ulo.lng + 122.4194) < 0.001, `${ulo.lat},${ulo.lng}`);
   const uloText = await geoPage.locator('[data-testid="location-status"]').innerText();
   check('location status shows you-are-here', /you are here/i.test(uloText), uloText.slice(0, 70));
-  await geoPage.screenshot({ path: `${shots}/03-forecast-light.png` });
+  await geoPage.screenshot({ path: `${shots}/03-forecast-light.png`, fullPage: true });
   await geoCtx.close();
 
   check('no page errors', errors.length === 0, errors.slice(0,2).join(' | '));
