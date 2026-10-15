@@ -247,6 +247,8 @@ article.result:hover {
    HEADER — Clean Light Frosted Bar (Full-Width)
    ================================================================ */
 header {
+  position: sticky !important;
+  top: 0 !important;
   left: 0 !important;
   width: 100% !important;
   background: rgba(255, 255, 255, 0.85) !important;
@@ -502,7 +504,7 @@ button, a, input, select {
     </filter>
   </defs>
 </svg>
-<header class="fixed top-0 w-full z-50 pt-safe bg-white/85 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
+<header class="sticky top-0 w-full z-50 pt-safe bg-white/85 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
 <div class="max-w-4xl mx-auto w-full px-space-md flex flex-col justify-center gap-space-xs py-2">
 <div class="flex items-center justify-between gap-space-sm">
 <div class="flex items-center gap-space-sm min-w-0">
@@ -517,22 +519,81 @@ button, a, input, select {
 <span class="font-label-sm text-label-sm text-on-surface-variant truncate hidden xs:block">Where &amp; when you're most likely to find a spot</span>
 </div>
 </div>
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-space-xs">
-<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" id="api-dot"></span>
-<span class="font-label-sm text-label-sm text-on-surface-variant" data-testid="api-status" id="api-status">Connecting…</span>
-</div>
-</div>
 </div>
 </header>
 
 <!-- ============ VIEW: FORECAST ============ -->
-<main class="flex flex-col relative w-full max-w-4xl mx-auto pt-[108px] pb-12 px-space-md min-h-screen" id="view-forecast">
+<main class="flex flex-col relative w-full max-w-4xl mx-auto pt-4 pb-12 px-space-md min-h-screen" id="view-forecast">
 <div class="flex flex-col w-full relative pb-6 gap-space-md">
 <div class="hidden items-center justify-between px-space-md py-space-sm rounded-xl bg-error/15 gap-space-sm" data-testid="api-error" id="api-error">
 <span class="font-body-sm text-body-sm text-error" id="api-error-text">Backend unreachable.</span>
 <button class="px-3 py-1.5 rounded-lg bg-error/20 text-error font-label-sm text-label-sm font-bold shrink-0" id="api-retry" type="button">Retry</button>
 </div>
+
+<!-- Destination Search & Search Radius Panel -->
+<section class="glass-panel p-space-md rounded-2xl flex flex-col gap-space-sm" id="destination-search-panel">
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+    <div class="relative flex-1 flex items-center">
+      <span class="material-symbols-outlined absolute left-3.5 text-slate-400 text-[20px] pointer-events-none">search</span>
+      <input
+        type="text"
+        id="dest-search-input"
+        data-testid="dest-search-input"
+        placeholder="Type destination (e.g. UC Berkeley, Downtown, Telegraph, Marina...)"
+        value="Downtown Berkeley"
+        class="w-full pl-11 pr-9 py-2.5 rounded-xl bg-white/90 border border-slate-200 text-slate-900 placeholder-slate-400 text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+        autocomplete="off"
+      />
+      <button
+        type="button"
+        id="dest-search-clear"
+        class="hidden absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+        title="Clear"
+      >
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <button
+      type="button"
+      id="dest-search-btn"
+      data-testid="dest-search-btn"
+      class="px-5 py-2.5 bg-primary hover:bg-emerald-700 text-white font-label-md font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-[18px]">near_me</span>
+      <span>Find Parking</span>
+    </button>
+  </div>
+
+  <!-- Search Radius Control (default 1.0 km) -->
+  <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-emerald-600 text-[18px]">radar</span>
+      <span class="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Search Radius:</span>
+      <span id="radius-val-label" data-testid="radius-val-label" class="text-[12px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">1.0 km</span>
+    </div>
+
+    <!-- Quick Radius Chips -->
+    <div class="flex items-center gap-1.5 flex-wrap" id="radius-chips">
+      <button type="button" data-radius="0.5" class="radius-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all">0.5 km</button>
+      <button type="button" data-radius="1.0" class="radius-chip active px-2.5 py-1 text-[11px] font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-sm transition-all">1.0 km (default)</button>
+      <button type="button" data-radius="1.5" class="radius-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all">1.5 km</button>
+      <button type="button" data-radius="2.0" class="radius-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all">2.0 km</button>
+      <button type="button" data-radius="3.0" class="radius-chip px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all">3.0 km</button>
+    </div>
+  </div>
+
+  <!-- Popular Destination Presets -->
+  <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] text-slate-500" id="dest-presets-row">
+    <span class="shrink-0 font-medium text-slate-400">Quick Dest:</span>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Downtown Berkeley">Downtown</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="UC Berkeley">UC Berkeley</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Telegraph Avenue">Telegraph</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Fourth Street">Fourth St</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Berkeley Marina">Marina</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Ashby BART">Ashby</button>
+    <button type="button" class="dest-preset px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors shrink-0 font-medium" data-dest="Gourmet Ghetto">Gourmet Ghetto</button>
+  </div>
+</section>
 <div class="flex items-center justify-between px-space-md py-space-sm rounded-xl bg-surface-container transition-all duration-300 shadow-md" id="location-banner">
 <div class="flex items-center gap-space-sm min-w-0">
 <div class="relative flex items-center justify-center w-3 h-3 shrink-0" id="banner-dot">
@@ -597,12 +658,16 @@ button, a, input, select {
 </div>
 </div>
 </div>
-<div class="flex flex-col gap-space-xs">
+<div class="flex flex-col gap-space-xs" id="nearby-zones-section">
 <div class="flex items-center justify-between px-1">
-<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold" id="zones-count-label">Tappable Zones</span>
-<span class="font-label-sm text-label-sm text-secondary font-medium">Tap to center</span>
+<div class="flex items-center gap-2 min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-bold" id="zones-count-label">Nearby Parking</span>
+<span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 shrink-0" id="zones-radius-badge">within 1.0 km</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-medium shrink-0">Tap to inspect</span>
 </div>
 <div class="flex gap-2 overflow-x-auto pb-1" id="zone-buttons"></div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1" id="nearby-cards"></div>
 </div>
 <div class="p-space-md rounded-xl bg-surface-container flex items-center justify-between gap-space-sm shadow-sm" id="reco-card">
 <div class="flex items-center gap-space-sm min-w-0">
@@ -614,13 +679,13 @@ button, a, input, select {
 <span class="font-body-sm text-body-sm text-on-surface-variant truncate" id="reco-sub">…</span>
 </div>
 </div>
-<button class="px-space-sm py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-bold shrink-0 hover:bg-primary-container transition-colors" id="reco-route" type="button">Route</button>
+<button class="px-space-sm py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-bold shrink-0 hover:bg-primary-container transition-colors cursor-pointer" id="reco-route" type="button">Route</button>
 </div>
 </div>
 </main>
 
 <!-- ============ VIEW: ZONES ============ -->
-<main class="hidden flex-col relative w-full max-w-4xl mx-auto pt-[108px] pb-12 px-space-md min-h-screen" data-testid="zone-detail" id="view-zones">
+<main class="hidden flex-col relative w-full max-w-4xl mx-auto pt-4 pb-12 px-space-md min-h-screen" data-testid="zone-detail" id="view-zones">
 <div class="flex flex-col w-full relative pb-6 gap-space-md">
 <div class="relative w-full h-44 rounded-xl overflow-hidden bg-surface-container-lowest shadow-md">
 <div class="absolute inset-0 bg-gradient-to-b from-transparent via-surface/60 to-surface"></div>

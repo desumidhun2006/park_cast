@@ -49,8 +49,40 @@ function baseProbability(zone, date) {
       if (isWeekday && h >= 10 && h < 16) p = 0.25;
       else p = 0.7;
       break;
-    default:
-      p = 0.5;
+    default: {
+      const tags = zone.poiTags || [];
+      if (tags.includes('transit')) {
+        if (isWeekday && ((h >= 7 && h <= 9) || (h >= 16 && h <= 18))) p = 0.20;
+        else if (h >= 20 || h < 6) p = 0.85;
+        else p = 0.55;
+      } else if (tags.includes('theatre') || tags.includes('stadium') || tags.includes('events')) {
+        if ((day === 5 || day === 6) && h >= 17 && h <= 23) p = 0.15;
+        else if (h >= 23 || h < 10) p = 0.88;
+        else p = 0.60;
+      } else if (tags.includes('dining') || tags.includes('culinary') || tags.includes('nightlife')) {
+        if (h >= 18 && h <= 21) p = 0.25;
+        else if (h >= 12 && h <= 14) p = 0.38;
+        else if (h >= 22 || h < 11) p = 0.80;
+        else p = 0.58;
+      } else if (tags.includes('shopping') || tags.includes('retail')) {
+        if (!isWeekday && h >= 11 && h <= 17) p = 0.22;
+        else if (isWeekday && h >= 12 && h <= 18) p = 0.45;
+        else p = 0.78;
+      } else if (tags.includes('campus') || tags.includes('university') || tags.includes('student-union')) {
+        if (isWeekday && h >= 9 && h <= 16) p = 0.24;
+        else if (h >= 18 || h < 8) p = 0.82;
+        else p = 0.52;
+      } else if (tags.includes('park') || tags.includes('waterfront') || tags.includes('outdoor')) {
+        if (!isWeekday && h >= 12 && h <= 17) p = 0.35;
+        else p = 0.85;
+      } else if (tags.includes('civic')) {
+        if (isWeekday && h >= 10 && h <= 15) p = 0.30;
+        else p = 0.75;
+      } else {
+        p = 0.60;
+      }
+      if (zone.kind === 'garage') p += 0.08;
+    }
   }
   // Traffic proxy: congestion 8-9, 17-19 reduces availability.
   const rush = (h >= 8 && h < 9.5) || (h >= 17 && h < 19) ? 0.12 : 0;
