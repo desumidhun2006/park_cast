@@ -44,5 +44,7 @@ Execution Frequency: This entire 5-step protocol must be repeated for every sing
 | 158f375 | Refined glassmorphism v3 — multi-color mesh gradients, 10-25% opacity panels, 16-20px blur, and chromatic refraction rims |
 | 9a457c8 | Dedicated forecast view with light theme — removed bottom/desktop sidebar navigation, eliminated standalone planner and badge views in favor of dedicated focused forecast interface; full bright light theme redesign with frosted crystal glassmorphism (rgba(255,255,255,0.84), subtle ambient pastel gradients, crisp slate typography, clean light map tiles); defensive null-guards in telemetry wiring; smoke test 28/28 PASS (100%) |
 | 12e024d | Full-page smoke screenshots — updated test suite to capture fullPage light theme forecast and opened zone detail sheet screenshots; 28/28 PASS (100%) |
+| c929eaa | Header cleanup — removed points and badges display chips from header; added smoke assertions; Playwright test 30/30 PASS (100%) |
+
 
 
