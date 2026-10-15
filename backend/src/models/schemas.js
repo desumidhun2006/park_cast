@@ -45,10 +45,36 @@ const userSchema = new mongoose.Schema({
   preferences: mongoose.Schema.Types.Mixed
 }, { collection: 'users', timestamps: true });
 
+// 7-Day Rolling Parking Feed Schema
+const parkingFeedSchema = new mongoose.Schema({
+  zoneId: { type: String, required: true, index: true },
+  zoneName: { type: String, required: true },
+  timestamp: { type: Date, required: true },
+  dateStr: { type: String, required: true, index: true }, // 'YYYY-MM-DD'
+  dayOfWeek: { type: String, required: true },
+  occupancyRate: { type: Number, required: true, min: 0, max: 1 },
+  probability: { type: Number, required: true, min: 0, max: 1 },
+  availableSpots: { type: Number, required: true, min: 0 },
+  totalCapacity: { type: Number, required: true, min: 0 },
+  status: { type: String, enum: ['high', 'medium', 'low'], required: true },
+  peakHour: { type: String, default: '17:00-19:00' },
+  turnoverCount: { type: Number, default: 0 },
+  weather: { type: String, default: 'Clear' },
+  summary: { type: String },
+  source: { type: String, default: 'daily-feed-sync' }
+}, { collection: 'parking_feed', timestamps: true });
+
+// Compound index for zone timelines
+parkingFeedSchema.index({ zoneId: 1, timestamp: -1 });
+
+// MongoDB TTL Index: automatically purges documents older than 7 days (604800 seconds)
+parkingFeedSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+
 module.exports = {
   Zone: mongoose.models.Zone || mongoose.model('Zone', zoneSchema),
   ParkingEvent: mongoose.models.ParkingEvent || mongoose.model('ParkingEvent', parkingEventSchema),
   UserReport: mongoose.models.UserReport || mongoose.model('UserReport', userReportSchema),
   Prediction: mongoose.models.Prediction || mongoose.model('Prediction', predictionSchema),
-  User: mongoose.models.User || mongoose.model('User', userSchema)
+  User: mongoose.models.User || mongoose.model('User', userSchema),
+  ParkingFeed: mongoose.models.ParkingFeed || mongoose.model('ParkingFeed', parkingFeedSchema)
 };

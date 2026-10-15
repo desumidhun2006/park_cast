@@ -28,3 +28,8 @@ frontend-screenshots/
 # Mongo / data
 *.log
 dump/
+
+# Presentation / review docs
+*.pdf
+*.pptx
+
