@@ -1,32 +1,22 @@
 const express = require('express');
-const { forecastAt, currentStatus } = require('../services/forecastService');
-const { seedZones } = require('../services/forecastService');
+const { forecastAt, currentStatus, seedZones, registerGlobalZones } = require('../services/forecastService');
+const { findGlobalParking, haversineKm } = require('../services/globalParkingService');
 
 const router = express.Router();
 
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
 // GET /api/route?origin=&destination=&time=&lat=&lng=&radius= — ranked zones + arrival windows
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { destination, time, lat, lng, radius } = req.query;
   const arrival = time ? new Date(time) : new Date();
-  const targetLat = lat !== undefined ? parseFloat(lat) : null;
-  const targetLng = lng !== undefined ? parseFloat(lng) : null;
-  const searchRadius = radius !== undefined ? parseFloat(radius) : 1.0;
+  const targetLat = lat !== undefined && lat !== '' ? parseFloat(lat) : null;
+  const targetLng = lng !== undefined && lng !== '' ? parseFloat(lng) : null;
+  const searchRadius = radius !== undefined && radius !== '' ? parseFloat(radius) : 1.0;
 
   let candidateZones = seedZones;
   if (targetLat !== null && targetLng !== null && !isNaN(targetLat) && !isNaN(targetLng)) {
-    const nearby = seedZones.filter(z => haversineKm(targetLat, targetLng, z.center.lat, z.center.lng) <= searchRadius);
+    candidateZones = await findGlobalParking(targetLat, targetLng, searchRadius, destination || 'Destination');
+    registerGlobalZones(candidateZones);
+    const nearby = candidateZones.filter(z => haversineKm(targetLat, targetLng, z.center.lat, z.center.lng) <= searchRadius);
     if (nearby.length > 0) candidateZones = nearby;
   }
 

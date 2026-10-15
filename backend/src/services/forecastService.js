@@ -107,9 +107,33 @@ function forecastAt(zone, date) {
   return { probability: Math.round(probability * 100) / 100, base: Math.round(base * 100) / 100, crowdAdj: Math.round(adj * 100) / 100 };
 }
 
+const globalZonesCache = new Map();
+
+function registerGlobalZones(zones) {
+  if (!Array.isArray(zones)) return;
+  zones.forEach(z => {
+    if (z && z.id) globalZonesCache.set(z.id, z);
+  });
+}
+
+function getGlobalZone(zoneId) {
+  return globalZonesCache.get(zoneId) || null;
+}
+
+function fallbackZone(zoneId) {
+  return {
+    id: zoneId,
+    name: 'Parking Facility',
+    kind: 'garage',
+    capacity: 200,
+    pricePerHour: 3.5,
+    poiTags: ['transit', 'commercial'],
+    center: { lat: 37.8715, lng: -122.273 }
+  };
+}
+
 function forecastSeries(zoneId, arrivalISO) {
-  const zone = seedZones.find(z => z.id === zoneId);
-  if (!zone) return null;
+  const zone = seedZones.find(z => z.id === zoneId) || getGlobalZone(zoneId) || fallbackZone(zoneId);
   const arrival = arrivalISO ? new Date(arrivalISO) : new Date();
   const horizons = [0, 15, 30, 60, 120, 180];
   const series = horizons.map(h => {
@@ -126,4 +150,13 @@ function currentStatus(probability) {
   return 'low';
 }
 
-module.exports = { forecastAt, forecastSeries, currentStatus, confidenceFor, addCrowdSignal, seedZones };
+module.exports = {
+  forecastAt,
+  forecastSeries,
+  currentStatus,
+  confidenceFor,
+  addCrowdSignal,
+  seedZones,
+  registerGlobalZones,
+  getGlobalZone
+};

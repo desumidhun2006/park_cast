@@ -43,6 +43,12 @@ try {
   check('POST /reports 201 + points', rp.status === 201 && (await rp.json()).pointsAwarded === 10);
   const rt = await (await fetch(`http://localhost:${BACKEND_PORT}/api/route?destination=Mall&lat=37.8702&lng=-122.2681&radius=1.0&time=${encodeURIComponent(new Date().toISOString())}`)).json();
   check('GET /route ranked + saved time', rt.ranked && rt.ranked.length > 0 && typeof rt.searchTimeSavedMin === 'number');
+
+  // Global parking discovery test (Paris — Eiffel Tower)
+  const gp = await (await fetch(`http://localhost:${BACKEND_PORT}/api/zones?lat=48.8584&lng=2.2945&radius=1.0&dest=Eiffel%20Tower`)).json();
+  check('global parking discovery returns zones for Paris', gp.count > 0 && gp.zones.length > 0, `count=${gp.count}`);
+  check('global zones have source field', gp.zones.every(z => z.source === 'osm' || z.source === 'synthesized' || z.source === 'seed'));
+  check('global zones have probability+status', gp.zones.every(z => z.current && typeof z.current.probability === 'number'));
 } catch (e) { check('backend API suite', false, e.message); }
 
 // 2. Playwright browser checks (Forecast page + Zone details in Light Theme)
@@ -83,14 +89,14 @@ try {
 
   // test changing radius to 2.0 km
   await page.locator('#radius-chips [data-radius="2.0"]').click();
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(1500);
   const radVal2 = await page.locator('[data-testid="radius-val-label"]').innerText();
   check('changing radius updates label to 2.0 km', radVal2.includes('2.0'), radVal2);
 
   // test typing a location
   await page.locator('[data-testid="dest-search-input"]').fill('Telegraph');
   await page.locator('[data-testid="dest-search-btn"]').click();
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(2000);
   const newDest = await page.evaluate(() => window.__parkistics.state.destination);
   check('typing destination updates state', newDest.toLowerCase().includes('telegraph'), newDest);
 
@@ -100,11 +106,23 @@ try {
   const firstCardText = await page.locator('#nearby-cards article').first().innerText();
   check('nearby card shows probability & availability', firstCardText.includes('%') && firstCardText.includes('spots'), firstCardText.slice(0, 60));
 
+  // test global parking discovery via UI (search for Paris)
+  await page.locator('[data-testid="dest-search-input"]').fill('Eiffel Tower, Paris');
+  await page.locator('[data-testid="dest-search-btn"]').click();
+  await page.waitForTimeout(3000);
+  const globalDest = await page.evaluate(() => window.__parkistics.state.destination);
+  check('global search resolves Eiffel Tower', globalDest.toLowerCase().includes('eiffel') || globalDest.toLowerCase().includes('paris') || globalDest.toLowerCase().includes('tour'), globalDest);
+  const globalCards = await page.locator('#nearby-cards article').count();
+  check('global parking cards rendered for Paris', globalCards > 0, `${globalCards} cards`);
+  const globalCoords = await page.evaluate(() => window.__parkistics.state.destCoords);
+  check('destination coords moved to Paris', Math.abs(globalCoords.lat - 48.85) < 1 && Math.abs(globalCoords.lng - 2.3) < 1, `lat=${globalCoords.lat}, lng=${globalCoords.lng}`);
+
   // reset to 1.0 km and Downtown for subsequent checks
   await page.locator('#radius-chips [data-radius="1.0"]').click();
+  await page.waitForTimeout(500);
   await page.locator('[data-testid="dest-search-input"]').fill('Downtown Berkeley');
   await page.locator('[data-testid="dest-search-btn"]').click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(2000);
 
   // time slider
   await page.locator('[data-testid="time-slider"]').fill('60');

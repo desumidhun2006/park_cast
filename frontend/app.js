@@ -441,16 +441,27 @@
 
   async function searchDestination(query) {
     const q = query || ($('dest-search-input') && $('dest-search-input').value) || 'Downtown Berkeley';
-    const resolved = await resolveDestination(q);
-    state.destination = resolved.name;
-    state.destCoords = { lat: resolved.lat, lng: resolved.lng };
-    if ($('dest-search-input')) $('dest-search-input').value = resolved.name.split(',')[0];
-    renderDestinationRadiusOnMap();
-    await refreshForecastBoard();
-    await refreshReco();
+    // Show searching state
+    const btn = $('dest-search-btn');
+    if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Searching…';
+    try {
+      const resolved = await resolveDestination(q);
+      state.destination = resolved.name;
+      state.destCoords = { lat: resolved.lat, lng: resolved.lng };
+      if ($('dest-search-input')) $('dest-search-input').value = resolved.name.split(',')[0];
+      // Re-fetch zones from backend with new destination coordinates (global parking discovery)
+      await fetchZones();
+      renderDestinationRadiusOnMap();
+      await refreshForecastBoard();
+      await refreshReco();
+    } catch (e) {
+      console.warn('Search destination error:', e);
+    } finally {
+      if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">near_me</span> Find Parking';
+    }
   }
 
-  function setRadius(km) {
+  async function setRadius(km) {
     state.searchRadiusKm = parseFloat(km);
     if ($('radius-val-label')) $('radius-val-label').textContent = `${state.searchRadiusKm.toFixed(1)} km`;
     document.querySelectorAll('#radius-chips .radius-chip').forEach(btn => {
@@ -463,13 +474,26 @@
       btn.classList.toggle('text-slate-600', !active);
       btn.classList.toggle('border-slate-200', !active);
     });
+    // Re-fetch from backend with new radius for global parking discovery
+    await fetchZones();
     renderDestinationRadiusOnMap();
     refreshForecastBoard();
     refreshReco();
   }
 
   async function fetchZones() {
-    const data = await api('/api/zones');
+    // Build query params — if we have destination coords, send them so backend discovers global parking
+    let url = '/api/zones';
+    if (state.destCoords && state.destCoords.lat && state.destCoords.lng) {
+      const p = new URLSearchParams({
+        lat: state.destCoords.lat,
+        lng: state.destCoords.lng,
+        radius: state.searchRadiusKm || 1.0,
+        dest: state.destination || 'Destination'
+      });
+      url = `/api/zones?${p.toString()}`;
+    }
+    const data = await api(url);
     state.zones = data.zones;
     state.apiOk = true;
     if ($('api-status')) $('api-status').textContent = `API: ${API_BASE} ✓ · ${data.count} zones live`;
@@ -513,7 +537,8 @@
     $('detail-price').innerHTML = `$${z.pricePerHour}<span class="font-body-sm text-body-sm text-on-surface-variant font-normal">/hr</span>`;
     $('detail-type').textContent = kindLabel(z.kind);
     $('detail-capacity').textContent = `${z.capacity} spots`;
-    $('detail-walk').textContent = `${(z.walkTo[0] && z.walkTo[0].minutes) || '?'} min walk`;
+    const walkMin = z.walkMinutes || (Array.isArray(z.walkTo) && z.walkTo[0] && z.walkTo[0].minutes) || (typeof z.walkTo === 'string' ? '~5' : '?');
+    $('detail-walk').textContent = `${walkMin} min walk`;
     $('detail-pattern').textContent = z.peakHours || '—';
     $('peek-label').textContent = `${shortName(z.name)} · live telemetry`;
     $('detail-navigate-text').textContent = `Navigate to ${shortName(z.name)}`;

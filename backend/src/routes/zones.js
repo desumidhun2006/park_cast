@@ -1,31 +1,26 @@
 const express = require('express');
-const { forecastAt, forecastSeries, currentStatus, confidenceFor } = require('../services/forecastService');
+const { forecastAt, forecastSeries, currentStatus, confidenceFor, registerGlobalZones, seedZones } = require('../services/forecastService');
+const { findGlobalParking, haversineKm } = require('../services/globalParkingService');
 const { mlPredict } = require('../services/mlClient');
 
 const router = express.Router();
 
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// GET /api/zones?lat=&lng=&radius= — nearby zones with current + predicted status
+// GET /api/zones?lat=&lng=&radius=&dest= — nearby zones anywhere on earth with current + predicted status
 router.get('/', async (req, res) => {
   const now = new Date();
-  const { seedZones } = require('../services/forecastService');
-  const { lat, lng, radius } = req.query;
-  const targetLat = lat !== undefined ? parseFloat(lat) : null;
-  const targetLng = lng !== undefined ? parseFloat(lng) : null;
-  const searchRadius = radius !== undefined ? parseFloat(radius) : 1.0; // default 1 km
+  const { lat, lng, radius, dest } = req.query;
+  const targetLat = lat !== undefined && lat !== '' ? parseFloat(lat) : null;
+  const targetLng = lng !== undefined && lng !== '' ? parseFloat(lng) : null;
+  const searchRadius = radius !== undefined && radius !== '' ? parseFloat(radius) : 1.0; // default 1 km
+  const destinationName = dest || 'Destination';
 
-  let zones = seedZones.map(z => {
+  let rawZones = seedZones;
+  if (targetLat !== null && targetLng !== null && !isNaN(targetLat) && !isNaN(targetLng)) {
+    rawZones = await findGlobalParking(targetLat, targetLng, searchRadius, destinationName);
+    registerGlobalZones(rawZones);
+  }
+
+  let zones = rawZones.map(z => {
     const f = forecastAt(z, now);
     const confidence = confidenceFor(z, now, 15);
     const availableSpots = Math.max(0, Math.round(z.capacity * f.probability));
@@ -34,6 +29,7 @@ router.get('/', async (req, res) => {
       capacity: z.capacity, pricePerHour: z.pricePerHour, walkTo: z.walkTo,
       peakHours: z.peakHours, poiTags: z.poiTags,
       availableSpots,
+      source: z.source || 'seed',
       current: { probability: f.probability, confidence: Math.round(confidence * 100) / 100, status: currentStatus(f.probability) }
     };
     if (targetLat !== null && targetLng !== null && !isNaN(targetLat) && !isNaN(targetLng)) {
@@ -55,6 +51,7 @@ router.get('/', async (req, res) => {
     at: now.toISOString(),
     searchRadius: (targetLat !== null && targetLng !== null) ? searchRadius : null,
     target: (targetLat !== null && targetLng !== null) ? { lat: targetLat, lng: targetLng } : null,
+    destination: destinationName,
     zones
   });
 });
