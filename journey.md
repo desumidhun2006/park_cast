@@ -45,6 +45,4 @@ Execution Frequency: This entire 5-step protocol must be repeated for every sing
 | 9a457c8 | Dedicated forecast view with light theme — removed bottom/desktop sidebar navigation, eliminated standalone planner and badge views in favor of dedicated focused forecast interface; full bright light theme redesign with frosted crystal glassmorphism (rgba(255,255,255,0.84), subtle ambient pastel gradients, crisp slate typography, clean light map tiles); defensive null-guards in telemetry wiring; smoke test 28/28 PASS (100%) |
 | 12e024d | Full-page smoke screenshots — updated test suite to capture fullPage light theme forecast and opened zone detail sheet screenshots; 28/28 PASS (100%) |
 | c929eaa | Header cleanup — removed points and badges display chips from header; added smoke assertions; Playwright test 30/30 PASS (100%) |
-
-
-
+| 08ad658 | Expanded parking dataset & destination radius search — expanded pilot zones from 6 to 24 diverse parking facilities across Downtown, Campus, Telegraph, Elmwood, West Berkeley, Marina, Ashby, and Gourmet Ghetto; added backend haversine radius query filter; implemented destination search bar with 1-tap presets and custom radius selector (default 1.0 km, with 0.5km, 1.5km, 2.0km, 3.0km chips); dynamically renders destination pin and Leaflet radius circle; displays responsive nearby parking cards showing probability %, availability count, walk distance, and rate; removed raw API status text from header; Playwright smoke test 36/36 PASS (100%) |
